@@ -1,39 +1,78 @@
-# JavaMQ
+# 赛题介绍
+题目: <实现进程内消息队列>  
+开发语言:JAVA  
+相关知识点: JAVA编程, 多线程, IO    
+测评环境:   
+	8核机器 16G内存   
+以正确性, 运行效率为排名标准  
 
-#### 项目介绍
-{**以下是码云平台说明，您可以替换为您的项目简介**
-码云是开源中国推出的基于 Git 的代码托管平台（同时支持 SVN）。专为开发者提供稳定、高效、安全的云端软件开发协作平台
-无论是个人、团队、或是企业，都能够用码云实现代码托管、项目管理、协作开发。企业项目请看 [https://gitee.com/enterprises](https://gitee.com/enterprises)}
+# 评测网站:
+网址 http:xxx  后续通知
+名字要求: 真实姓名（组号）
 
-#### 软件架构
-软件架构说明
+# 代码提交方式
+通过git提交, 我们在https://gitee.com/托管代码  
+代码框架:
+你需要:   
+1 注册一个账号, fork这个项目, 作为你的git地址  
+2 在管理界面-项目成员管理-开发者-添加项目成员-邀请用户-直接添加, 添加一个开发者:yzd，个性域名为yzdaaa那个  
+3 在管理-项目设置-基本设置, 是否开源设置为私有的  
+4 然后在评测网站上设置git地址，然后点"提交评测"来提交（后续通知）  
+
+# 时间安排
+11.29-12.26(11周周四-15周周三) 比赛阶段
+14、15周答辩汇报，16周期末复习
+
+13周 12月13日周四会讲解一些常见问题和优化思路，并上线一道附加赛题，给学有余力同学额外比赛，12.26截至
+
+14周 12月19日周三晚上22：00 第一阶段截止排名  
+选择前15个组在20号周四的汇报
+
+15周 12月26日周三晚上22：00 第二阶段截止排名   
+剩余组在27号进行汇报+附加题汇报
+
+# 汇报内容
+
+不用介绍赛题背景，以碰到的问题，解决的思路等为主，尽可能详细，可以讨论商量，但严禁抄袭，（提交次数少，成绩特别好，答辩内容一带而过，问题回答不上等），后果会很严重。
+
+# 阶段任务
+
+13周 12月13日22：00前，熟悉git和码云网站，阅读demo代码，至少有一次提交记录（成功失败都算），否则会被扣分。    
+14周 12月20日22：00前，至少有一次成功提交的记录，否则会被扣分。（当天已有一半同学结束汇报）  
+
+# 评分标准:
+
+个人成绩按最终排名成绩计算（基准） 每个阶段必须执行完对应任务，否则会有相应扣分 给分都会比较高，即使排名靠后的，但汇报展示出你们的工作量和收获，会比发现抄袭的好得多 最终得分标准=小组最好成绩+PPT汇报+答辩问答情况+阶段任务完成情况+附加题
+
+# 赛题背景
+见ppt
+
+# 编程目标
+你的coding目标是实现以下接口:  
+Producer的createBytesMessageToTopic(topic, body) 创建一个消息, 指定Topic  
+Producer的send(message) 发送消息  
+Producer的flush(), 发送结束时会调用一次  
+Consumer的attachQueue(queue, topics) 为Queue绑定Topics  
+Consumer的poll()  拉消息  
+
+# 评测逻辑:
+1 git clone下载代码  
+2 push阶段: 四个线程同时push消息  
+3 kill程序,清理页面缓存  
+4 pull阶段: 四个线程同时pull消息  
+5 以push和pull的总时间作为排名依据  
+push和pull都有时间限制  
+
+# 代码结构
+## pku包下面是你要用到的的类:
+核心包括: Producer Consume KeyValue ByteMessage MessageHeader  
+我们的评测程序只需要这5个类就能工作  
+DefaultKeyValue和DefaultMessage是默认的key-value和message实现, 你完全可以自己自己的版本    
+## 此版本是一个内存实现的消息队列
+为了方便大家理解题目, 为大家实现了一个内存存储的消息队列  
+DemoConsumer: 继承Consumer  
+DemoProducer: 继承Producer  
+DemoMessageStore: 消息队列的内存存储实现  
+DemoTester: 一个测评程序, 里面会开启多个线程进行push与pull, 通过这个类你可以了解到测评程序的运行逻辑    
 
 
-#### 安装教程
-
-1. xxxx
-2. xxxx
-3. xxxx
-
-#### 使用说明
-
-1. xxxx
-2. xxxx
-3. xxxx
-
-#### 参与贡献
-
-1. Fork 本项目
-2. 新建 Feat_xxx 分支
-3. 提交代码
-4. 新建 Pull Request
-
-
-#### 码云特技
-
-1. 使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2. 码云官方博客 [blog.gitee.com](https://blog.gitee.com)
-3. 你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解码云上的优秀开源项目
-4. [GVP](https://gitee.com/gvp) 全称是码云最有价值开源项目，是码云综合评定出的优秀开源项目
-5. 码云官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6. 码云封面人物是一档用来展示码云会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
