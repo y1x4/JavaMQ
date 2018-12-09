@@ -18,6 +18,6 @@ public class Producer {
     }
     //处理将缓存区的剩余部分
     public void flush()throws Exception{
-        System.out.println(1);
+        System.out.println("flush");
     }
 }

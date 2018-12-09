@@ -1,12 +1,13 @@
 package pku;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Set;
 
 /**
  * 一个Key-Value的实现
  */
-public class DefaultKeyValue implements KeyValue{
+public class DefaultKeyValue implements KeyValue, Serializable {
     private final HashMap<String, Object> kvs = new HashMap<>();
 
     public Object getObj(String key) {

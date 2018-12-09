@@ -1,10 +1,5 @@
 package pku;
 
-import pku.ByteMessage;
-import pku.Consumer;
-import pku.MessageHeader;
-import pku.Producer;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -59,7 +54,7 @@ public class DemoTester {
                     for (int j = 0; j < PUSH_COUNT; j++) {
                         //topic加j作为数据部分
                         //j是序号, 在consumer中会用来校验顺序
-                        byte[] data = (topic +" "+id + " " + j).getBytes();
+                        byte[] data = (topic + " "+id + " " + j).getBytes();
                         ByteMessage msg = producer.createBytesMessageToTopic(topics.get(i), data);
                         //设置一个header
                         msg.putHeaders(MessageHeader.SEARCH_KEY, "hello");
@@ -187,6 +182,7 @@ public class DemoTester {
     }
 
     public static void main(String args[]) {
+
         try {
                 testPush();
                 testPull();
