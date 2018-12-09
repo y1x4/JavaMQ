@@ -10,8 +10,6 @@ import java.util.Map;
 public class DemoMessageStore {
 	static final DemoMessageStore store = new DemoMessageStore();
 
-	private static final int HEADERS_LENGTH = 4;
-
 	HashMap<String, DataOutputStream> outMap = new HashMap<>();
     HashMap<String, DataInputStream> inMap  = new HashMap<>();
 
@@ -38,6 +36,8 @@ public class DemoMessageStore {
                         new FileOutputStream("./data/" + topic,  true)));
             }
             out = outMap.get(topic);
+
+            out.writeByte((byte) msg.headers().getMap().size());    // headers' size
 
             // write headers' keyLength, keyBytes, valueLength, valueBytes
             for (Map.Entry<String, Object> entry : msg.headers().getMap().entrySet()) {
@@ -77,13 +77,14 @@ public class DemoMessageStore {
 	// 加锁保证线程安全
 	public synchronized ByteMessage pull(String queue, String topic) {
         try {
+
             if (! new File("./data/" + topic).exists()) // 不存在此 topic 文件
                 return null;
 
             String key = queue + topic;
             if (!inMap.containsKey(key)) {
-                inMap.put(key, new DataInputStream(
-                        new FileInputStream("./data/" + topic)));
+                inMap.put(key, new DataInputStream(new BufferedInputStream(
+                        new FileInputStream("./data/" + topic))));
             }
             //每个 queue+topic 都有一个InputStream
             in = inMap.get(key);
@@ -92,8 +93,11 @@ public class DemoMessageStore {
                 return null;
             }
 
+            int headerSize = in.readByte();
+
+            // 读取 headers 部分
             KeyValue headers = new DefaultKeyValue();
-            for (int i = 0; i < HEADERS_LENGTH; i++) {
+            for (int i = 0; i < headerSize; i++) {
                 byte kLen = in.readByte();    // keyLength
                 //读到文件尾了，则lenTotal为-1
                 if(kLen < 0)
@@ -121,10 +125,12 @@ public class DemoMessageStore {
                 }
             }
 
+            // 读取 body 部分
             byte lenBody = in.readByte();
             byte[] body = new byte[lenBody];
             in.read(body);
 
+            // 组成消息并返回
             ByteMessage msg = new DefaultMessage(body);
             msg.setHeaders(headers);
             return msg;
