@@ -41,7 +41,8 @@ public class Consumer {
         return re;
         */
 
-        // 依次读取 topic 所有内容
+
+        // 依次读取 topic 所有内容，updated by yixuwang 2018-12-10 14:38:18
         ByteMessage re;
 
         do {

@@ -37,8 +37,7 @@ public class DemoMessageStore {
             }
             out = outMap.get(topic);
 
-            int headerSize = msg.headers().getMap().size();
-            out.writeByte((byte) headerSize);
+            out.writeByte((byte) msg.headers().getMap().size());
 
             // write headers' keyLength, keyBytes, valueLength, valueBytes
             for (Map.Entry<String, Object> entry : msg.headers().getMap().entrySet()) {
@@ -99,15 +98,12 @@ public class DemoMessageStore {
             KeyValue headers = new DefaultKeyValue();
             for (int i = 0; i < headerSize; i++) {
                 byte kLen = in.readByte();    // keyLength
-                //读到文件尾了，则lenTotal为-1
-                if(kLen < 0)
-                    return null;
                 byte[] bytes = new byte[kLen];
                 in.read(bytes);
                 String headerKey = new String(bytes);   // key
 
                 // 0 int, 1 long, 2 double, 3 string
-                System.out.println(headerKey);
+                // System.out.println(headerKey);
                 int headerType = MessageHeader.getHeaderType(headerKey);
 
                 if (headerType == 0) {
