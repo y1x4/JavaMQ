@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class DemoTester {
     //每个pusher向每个topic发送的消息数目
-    static int PUSH_COUNT = 1000;
+    static int PUSH_COUNT = 100000;
     //发送消息的线程数
     static int PUSH_THREAD_COUNT = 4;
     //发送线程往n个topic发消息
@@ -153,7 +153,7 @@ public class DemoTester {
             pushers.get(i).join();
         }
         long time2 = System.currentTimeMillis();
-        System.out.println(String.format("push 结束 time cost %d push count %d", time2 - time1, pushCount.get()));
+        System.out.println(String.format("push 结束，time cost: %d，push count: %d", time2 - time1, pushCount.get()));
     }
 
     static void testPull()throws Exception{
@@ -178,7 +178,7 @@ public class DemoTester {
             pullers.get(i).join();
         }
         long time3 = System.currentTimeMillis();
-        System.out.println(String.format("pull 结束 time cost %d pull count %d", time3 - time2, pullCount.get()));
+        System.out.println(String.format("pull 结束，time cost: %d，push count: %d", time3 - time2, pullCount.get()));
     }
 
     public static void main(String args[]) {

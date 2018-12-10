@@ -3,6 +3,7 @@ package pku;
 import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 这是一个消息队列的内存实现
@@ -32,8 +33,8 @@ public class DemoMessageStore {
                 File file = new File("./data/" + topic);
                 if (file.exists()) file.delete();
 
-                outMap.put(topic, new DataOutputStream(
-                        new FileOutputStream("./data/" + topic,  true)));
+                outMap.put(topic, new DataOutputStream(new BufferedOutputStream(
+                        new FileOutputStream("./data/" + topic,  true))));
             }
             out = outMap.get(topic);
 
@@ -46,7 +47,7 @@ public class DemoMessageStore {
                 out.writeByte(entry.getKey().getBytes().length);
                 out.write(entry.getKey().getBytes());
 
-                // 0 int, 1 long, 2 double, 3 string
+                // headerType: 0 int, 1 long, 2 double, 3 string
                 int headerType = MessageHeader.getTypeLength(headerKey);
                 if (headerType == 0) {
                     out.writeByte(4);
@@ -141,5 +142,16 @@ public class DemoMessageStore {
         return null;
 	}
 
-	
+
+	public void flush(Set<String> topics) {
+        DataOutputStream out;
+        for (String topic : topics) {
+            out = outMap.get(topic);
+            try {
+                out.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 }

@@ -49,6 +49,6 @@ public class Consumer {
         } while (re == null && ++index < topics.size());
 
         return re;
-
     }
+
 }
