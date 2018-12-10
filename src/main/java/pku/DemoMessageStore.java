@@ -33,6 +33,7 @@ public class DemoMessageStore {
 			return;
 
         try {
+
             if (!outMap.containsKey(topic)) {
                 File file = new File("./data/" + topic);
                 if (file.exists()) file.delete();
@@ -82,13 +83,13 @@ public class DemoMessageStore {
 	// 加锁保证线程安全
 	public synchronized ByteMessage pull(String queue, String topic) {
         try {
+
             if (! new File("./data/" + topic).exists()) // 不存在此 topic 文件
                 return null;
 
             String key = queue + topic;
             if (!inMap.containsKey(key)) {
                 inMap.put(key, new DataInputStream(new BufferedInputStream(new FileInputStream("./data/" + topic))));
-
             }
             //每个 queue+topic 都有一个InputStream
             in = inMap.get(key);
@@ -225,7 +226,6 @@ public class DemoMessageStore {
     // flush
 	public void flush(Set<String> topics) {
         DataOutputStream out;
-
         try {
             for (String topic : topics) {
                 out = outMap.get(topic);
