@@ -21,6 +21,8 @@ public class DemoMessageStore {
     DataInputStream in; // 按 queue + topic 读取 不同 topic 文件
     MappedByteBuffer inMbb;
 
+    int cnt = 0;
+
 	// 加锁保证线程安全
 	/**
 	 * @param msg
@@ -91,14 +93,15 @@ public class DemoMessageStore {
             //每个 queue+topic 都有一个InputStream
             in = inMap.get(key);
 
+            // 此 topic 已读取完毕
             if (in.available() == 0) {
+                inMap.remove(key);
                 return null;
             }
 
-            int headerSize = in.readByte();
-
             // 读取 headers 部分
             KeyValue headers = new DefaultKeyValue();
+            int headerSize = in.readByte();
             for (int i = 0; i < headerSize; i++) {
                 byte kLen = in.readByte();    // keyLength
                 byte[] bytes = new byte[kLen];
@@ -159,21 +162,24 @@ public class DemoMessageStore {
                 MappedByteBuffer inMbb = fci.map(FileChannel.MapMode.READ_ONLY, 0, fci.size());
 
                 mbbMap.put(key, inMbb);
-
             }
-            //每个 queue+topic 都有一个InputStream
             inMbb = mbbMap.get(key);
 
+            // 这个流已经读完
             if (!inMbb.hasRemaining()) {
+                mbbMap.remove(key);
+                // System.out.println(key);
                 return null;
             }
 
-            int headerSize = inMbb.get();
-
             // 读取 headers 部分
             KeyValue headers = new DefaultKeyValue();
+            int headerSize = inMbb.get();
             for (int i = 0; i < headerSize; i++) {
                 byte kLen = inMbb.get();    // keyLength
+                if (kLen <= 0) {
+                    System.out.println(kLen);
+                }
                 byte[] bytes = new byte[kLen];
                 inMbb.get(bytes);
                 String headerKey = new String(bytes);   // key
@@ -201,6 +207,7 @@ public class DemoMessageStore {
             byte[] body = new byte[bodyLen];
             inMbb.get(body);
 
+            cnt++;
 
             // 组成消息并返回
             ByteMessage msg = new DefaultMessage(body);
@@ -209,19 +216,21 @@ public class DemoMessageStore {
 
         } catch (IOException e) {
             e.printStackTrace();
+            return null;
         }
-        return null;
     }
 
+
+    // flush
 	public void flush(Set<String> topics) {
         DataOutputStream out;
-        for (String topic : topics) {
-            out = outMap.get(topic);
-            try {
+        try {
+            for (String topic : topics) {
+                out = outMap.get(topic);
                 out.flush();
-            } catch (IOException e) {
-                e.printStackTrace();
             }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }
