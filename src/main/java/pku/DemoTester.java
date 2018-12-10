@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class DemoTester {
     // 每个pusher向每个topic发送的消息数目
-    static int PUSH_COUNT = 100000;
+    static int PUSH_COUNT = 1000;
     // 发送消息的线程数
     static int PUSH_THREAD_COUNT = 4;
     // 发送线程往n个topic发消息
@@ -59,6 +59,7 @@ public class DemoTester {
                         // 设置4个不同的header
                         msg.putHeaders(MessageHeader.MESSAGE_ID, 0);
                         msg.putHeaders(MessageHeader.BORN_TIMESTAMP, 1L);
+                        msg.putHeaders(MessageHeader.SHARDING_PARTITION, 2.0);
                         msg.putHeaders(MessageHeader.SHARDING_KEY, 3.0);
                         msg.putHeaders(MessageHeader.SEARCH_KEY, "hello");
                         // 发送消息
@@ -110,7 +111,7 @@ public class DemoTester {
                         String topic = strs[0];
                         String prod = strs[1];
                         int j = Integer.parseInt(strs[2]);
-                        String mapkey=topic+" "+prod;
+                        String mapkey = topic+" "+prod;
                         if (!posTable.containsKey(mapkey)) {
                             posTable.put(mapkey, 0);
                         }
@@ -120,19 +121,23 @@ public class DemoTester {
                             System.exit(0);
                         }
                         if (msg.headers().getInt(MessageHeader.MESSAGE_ID) != 0) {
-                            System.out.println(String.format("header错误 topic %s 序号:%d", topic, j));
+                            System.out.println(String.format("header错误1 topic %s 序号:%d", topic, j));
                             System.exit(0);
                         }
                         if (msg.headers().getLong(MessageHeader.BORN_TIMESTAMP) != 1L) {
-                            System.out.println(String.format("header错误 topic %s 序号:%d", topic, j));
+                            System.out.println(String.format("header错误2 topic %s 序号:%d", topic, j));
+                            System.exit(0);
+                        }
+                        if (msg.headers().getDouble(MessageHeader.SHARDING_PARTITION) != 2.0) {
+                            System.out.println(String.format("header错误3 topic %s 序号:%d", topic, j));
                             System.exit(0);
                         }
                         if (msg.headers().getDouble(MessageHeader.SHARDING_KEY) != 3.0) {
-                            System.out.println(String.format("header错误 topic %s 序号:%d", topic, j));
+                            System.out.println(String.format("header错误3 topic %s 序号:%d", topic, j));
                             System.exit(0);
                         }
                         if (!msg.headers().getString(MessageHeader.SEARCH_KEY).equals("hello")) {
-                            System.out.println(String.format("header错误 topic %s 序号:%d", topic, j));
+                            System.out.println(String.format("header错误4 topic %s 序号:%d", topic, j));
                             System.exit(0);
                         }
 
