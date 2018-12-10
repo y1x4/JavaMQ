@@ -1,6 +1,8 @@
 package pku;
 
 import java.io.*;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -13,9 +15,11 @@ public class DemoMessageStore {
 
 	HashMap<String, DataOutputStream> outMap = new HashMap<>();
     HashMap<String, DataInputStream> inMap  = new HashMap<>();
+    HashMap<String, MappedByteBuffer> mbbMap  = new HashMap<>();
 
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
     DataInputStream in; // 按 queue + topic 读取 不同 topic 文件
+    MappedByteBuffer inMbb;
 
 	// 加锁保证线程安全
 	/**
@@ -23,9 +27,8 @@ public class DemoMessageStore {
 	 * @param topic
 	 */
 	public synchronized void push(ByteMessage msg, String topic) {
-		if (msg == null) {
+		if (msg == null)
 			return;
-		}
 
         try {
             if (!outMap.containsKey(topic)) {
@@ -82,8 +85,8 @@ public class DemoMessageStore {
 
             String key = queue + topic;
             if (!inMap.containsKey(key)) {
-                inMap.put(key, new DataInputStream(new BufferedInputStream(
-                        new FileInputStream("./data/" + topic))));
+                inMap.put(key, new DataInputStream(new BufferedInputStream(new FileInputStream("./data/" + topic))));
+
             }
             //每个 queue+topic 都有一个InputStream
             in = inMap.get(key);
@@ -125,6 +128,10 @@ public class DemoMessageStore {
             byte[] body = new byte[bodyLen];
             in.read(body);
 
+
+
+
+
             // 组成消息并返回
             ByteMessage msg = new DefaultMessage(body);
             msg.setHeaders(headers);
@@ -136,6 +143,75 @@ public class DemoMessageStore {
         return null;
 	}
 
+
+
+    // 加锁保证线程安全
+    public synchronized ByteMessage pullMBB(String queue, String topic) {
+        try {
+            if (! new File("./data/" + topic).exists()) // 不存在此 topic 文件
+                return null;
+
+            String key = queue + topic;
+            if (!mbbMap.containsKey(key)) {
+
+                RandomAccessFile rafi = new RandomAccessFile("./data/" + topic, "r");
+                FileChannel fci = rafi.getChannel();
+                MappedByteBuffer inMbb = fci.map(FileChannel.MapMode.READ_ONLY, 0, fci.size());
+
+                mbbMap.put(key, inMbb);
+
+            }
+            //每个 queue+topic 都有一个InputStream
+            inMbb = mbbMap.get(key);
+
+            if (!inMbb.hasRemaining()) {
+                return null;
+            }
+
+            int headerSize = inMbb.get();
+
+            // 读取 headers 部分
+            KeyValue headers = new DefaultKeyValue();
+            for (int i = 0; i < headerSize; i++) {
+                byte kLen = inMbb.get();    // keyLength
+                byte[] bytes = new byte[kLen];
+                inMbb.get(bytes);
+                String headerKey = new String(bytes);   // key
+
+                // 0 int, 1 long, 2 double, 3 string
+                // System.out.println(headerKey);
+                int headerType = MessageHeader.getHeaderType(headerKey);
+
+                if (headerType == 0) {
+                    headers.put(headerKey, inMbb.getInt());
+                } else if (headerType == 1) {
+                    headers.put(headerKey, inMbb.getLong());
+                } else if (headerType == 2) {
+                    headers.put(headerKey, inMbb.getDouble());
+                } else {
+                    byte vLen = inMbb.get();    // valueLength
+                    byte[] vals = new byte[vLen];    // value
+                    inMbb.get(vals);
+                    headers.put(headerKey, new String(vals));
+                }
+            }
+
+            // 读取 body 部分
+            byte bodyLen = inMbb.get();
+            byte[] body = new byte[bodyLen];
+            inMbb.get(body);
+
+
+            // 组成消息并返回
+            ByteMessage msg = new DefaultMessage(body);
+            msg.setHeaders(headers);
+            return msg;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
 	public void flush(Set<String> topics) {
         DataOutputStream out;
