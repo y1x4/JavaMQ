@@ -179,6 +179,7 @@ public class DemoMessageStore {
                 byte kLen = inMbb.get();    // keyLength
                 if (kLen <= 0) {
                     System.out.println(kLen);
+                    System.out.println(cnt);
                 }
                 byte[] bytes = new byte[kLen];
                 inMbb.get(bytes);
