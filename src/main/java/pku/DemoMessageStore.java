@@ -96,7 +96,7 @@ public class DemoMessageStore {
 
             // 此 topic 已读取完毕
             if (in.available() == 0) {
-                inMap.remove(key);
+                //inMap.remove(key);
                 return null;
             }
 
@@ -106,7 +106,7 @@ public class DemoMessageStore {
             for (int i = 0; i < headerSize; i++) {
                 byte kLen = in.readByte();    // keyLength
                 if (kLen <= 0) {
-                    System.out.println(kLen);
+                    System.out.println(kLen);   // -92 ?
                     System.out.println(cnt);
                 }
                 byte[] bytes = new byte[kLen];
