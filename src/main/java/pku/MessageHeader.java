@@ -10,17 +10,21 @@ import java.util.Map;
  */
 public class MessageHeader {
 
+    // 0 int, 1 long, 2 double, 3 string
     private static final Map<String, Integer> typeMap = new HashMap<String, Integer>(){{
         put(MESSAGE_ID, 0);
         put(TIMEOUT, 0);
         put(PRIORITY, 0);
         put(RELIABILITY, 0);
+
         put(BORN_TIMESTAMP, 1);
         put(STORE_TIMESTAMP, 1);
         put(START_TIME, 1);
         put(STOP_TIME, 1);
+
         put(SHARDING_KEY, 2);
         put(SHARDING_PARTITION, 2);
+
         put(TOPIC, 3);
         put(BORN_HOST, 3);
         put(STORE_HOST, 3);
@@ -30,7 +34,7 @@ public class MessageHeader {
     }};
 
     // get headers' type and its length to byte, string using -1
-    public static int getTypeLength(String header) {
+    public static int getHeaderType(String header) {
         return typeMap.get(header);
     }
 

@@ -42,7 +42,7 @@ public class Consumer {
         */
 
         // 依次读取 topic 所有内容
-        ByteMessage re = null;
+        ByteMessage re;
 
         do {
             re = DemoMessageStore.store.pull(queue, topics.get(index));

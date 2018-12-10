@@ -20,13 +20,13 @@ public class Producer {
     }
 
     //将message发送出去
-    public void send(ByteMessage defaultMessage) {
-        String topic = defaultMessage.headers().getString(MessageHeader.TOPIC);
-        DemoMessageStore.store.push(defaultMessage, topic);
+    public void send(ByteMessage msg) {
+        String topic = msg.headers().getString(MessageHeader.TOPIC);
+        DemoMessageStore.store.push(msg, topic);
     }
 
     //处理将缓存区的剩余部分
-    public void flush()throws Exception{
+    public void flush()throws Exception {
         DemoMessageStore.store.flush(topics);
         System.out.println("flush");
     }

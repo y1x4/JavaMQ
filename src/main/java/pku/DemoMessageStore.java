@@ -17,7 +17,6 @@ public class DemoMessageStore {
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
     DataInputStream in; // 按 queue + topic 读取 不同 topic 文件
 
-
 	// 加锁保证线程安全
 	/**
 	 * @param msg
@@ -48,15 +47,15 @@ public class DemoMessageStore {
                 out.write(entry.getKey().getBytes());
 
                 // headerType: 0 int, 1 long, 2 double, 3 string
-                int headerType = MessageHeader.getTypeLength(headerKey);
+                int headerType = MessageHeader.getHeaderType(headerKey);
                 if (headerType == 0) {
-                    out.writeByte(4);
+                    //out.writeByte(4); // 知道int数据类型长度，不需要存
                     out.writeInt((int) entry.getValue());
                 } else if (headerType == 1) {
-                    out.writeByte(8);
+                    //out.writeByte(8);
                     out.writeLong((long) entry.getValue());
                 } else if (headerType == 2) {
-                    out.writeByte(8);
+                    //out.writeByte(8);
                     out.writeDouble((double) entry.getValue());
                 } else {
                     String strVal = (String) entry.getValue();
@@ -108,7 +107,7 @@ public class DemoMessageStore {
                 String headerKey = new String(bytes);   // key
 
                 // 0 int, 1 long, 2 double, 3 string
-                int headerType = MessageHeader.getTypeLength(headerKey);
+                int headerType = MessageHeader.getHeaderType(headerKey);
                 if (headerType == 0) {
                     int val = in.readInt();
                     headers.put(headerKey, val);
