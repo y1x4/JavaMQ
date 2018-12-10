@@ -37,14 +37,15 @@ public class DemoMessageStore {
             }
             out = outMap.get(topic);
 
-            out.writeByte((byte) msg.headers().getMap().size());    // headers' size
+            int headerSize = msg.headers().getMap().size();
+            out.writeByte((byte) headerSize);
 
             // write headers' keyLength, keyBytes, valueLength, valueBytes
             for (Map.Entry<String, Object> entry : msg.headers().getMap().entrySet()) {
                 String headerKey = entry.getKey();
 
-                out.writeByte(entry.getKey().getBytes().length);
-                out.write(entry.getKey().getBytes());
+                out.writeByte(headerKey.getBytes().length);
+                out.write(headerKey.getBytes());
 
                 // headerType: 0 int, 1 long, 2 double, 3 string
                 int headerType = MessageHeader.getHeaderType(headerKey);
@@ -59,7 +60,7 @@ public class DemoMessageStore {
                     out.writeDouble((double) entry.getValue());
                 } else {
                     String strVal = (String) entry.getValue();
-                    out.writeByte(strVal.getBytes().length);
+                    out.writeByte((byte) strVal.getBytes().length);
                     out.write(strVal.getBytes());
                 }
             }
@@ -77,7 +78,6 @@ public class DemoMessageStore {
 	// 加锁保证线程安全
 	public synchronized ByteMessage pull(String queue, String topic) {
         try {
-
             if (! new File("./data/" + topic).exists()) // 不存在此 topic 文件
                 return null;
 
@@ -107,18 +107,17 @@ public class DemoMessageStore {
                 String headerKey = new String(bytes);   // key
 
                 // 0 int, 1 long, 2 double, 3 string
+                System.out.println(headerKey);
                 int headerType = MessageHeader.getHeaderType(headerKey);
+
                 if (headerType == 0) {
-                    int val = in.readInt();
-                    headers.put(headerKey, val);
+                    headers.put(headerKey, in.readInt());
                 } else if (headerType == 1) {
-                    long val = in.readLong();
-                    headers.put(headerKey, val);
+                    headers.put(headerKey, in.readLong());
                 } else if (headerType == 2) {
-                    double val = in.readDouble();
-                    headers.put(headerKey, val);
+                    headers.put(headerKey, in.readDouble());
                 } else {
-                    byte vLen = (byte) in.read();    // valueLength
+                    byte vLen = in.readByte();    // valueLength
                     byte[] vals = new byte[vLen];    // value
                     in.read(vals);
                     headers.put(headerKey, new String(vals));
@@ -126,8 +125,8 @@ public class DemoMessageStore {
             }
 
             // 读取 body 部分
-            byte lenBody = in.readByte();
-            byte[] body = new byte[lenBody];
+            byte bodyLen = in.readByte();
+            byte[] body = new byte[bodyLen];
             in.read(body);
 
             // 组成消息并返回
