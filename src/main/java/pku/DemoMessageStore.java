@@ -105,6 +105,10 @@ public class DemoMessageStore {
             int headerSize = in.readByte();
             for (int i = 0; i < headerSize; i++) {
                 byte kLen = in.readByte();    // keyLength
+                if (kLen <= 0) {
+                    System.out.println(kLen);
+                    System.out.println(cnt);
+                }
                 byte[] bytes = new byte[kLen];
                 in.read(bytes);
                 String headerKey = new String(bytes);   // key
@@ -133,7 +137,7 @@ public class DemoMessageStore {
             in.read(body);
 
 
-
+            cnt++;
 
 
             // 组成消息并返回
