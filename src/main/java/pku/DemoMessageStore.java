@@ -96,7 +96,7 @@ public class DemoMessageStore {
 
             // 此 topic 已读取完毕
             if (in.available() == 0) {
-                //inMap.remove(key);
+                inMap.remove(key);
                 return null;
             }
 
@@ -173,7 +173,7 @@ public class DemoMessageStore {
 
             // 这个流已经读完
             if (!inMbb.hasRemaining()) {
-                // mbbMap.remove(key);
+                mbbMap.remove(key);
                 // System.out.println(key);
                 return null;
             }
