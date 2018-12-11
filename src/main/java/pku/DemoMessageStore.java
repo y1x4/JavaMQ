@@ -31,7 +31,7 @@ public class DemoMessageStore {
 			return;
 
         try {
-
+            // 获取写入流
             if (!outMap.containsKey(topic)) {
                 File file = new File("./data/" + topic);
                 if (file.exists()) file.delete();
@@ -42,9 +42,9 @@ public class DemoMessageStore {
             out = outMap.get(topic);
 
 
+            // write headers —— size, key index, valueLength, valueBytes
             out.writeByte(msg.headers().getMap().size());
 
-            // write headers' key index, valueLength, valueBytes
             for (Map.Entry<String, Object> entry : msg.headers().getMap().entrySet()) {
                 String headerKey = entry.getKey();
 
@@ -97,7 +97,7 @@ public class DemoMessageStore {
                 out.writeByte(bodyLen);
             } else {
                 out.writeByte(1);  // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
-                out.writeShort(bodyLen);
+                out.writeInt(bodyLen);
             }
             out.write(msg.getBody());
 
@@ -207,7 +207,7 @@ public class DemoMessageStore {
             for (int i = 0; i < headerSize; i++) {
                 int index = inBuffer.get();
 
-                // 0-3, 4-7, 8-9, 10-15
+                // 0-3 int, 4-7 long, 8-9 double, 10-15 string
                 if (index <= 3) {
                     headers.put(MessageHeader.getHeader(index), inBuffer.getInt());
                 } else if (index <= 7) {
@@ -252,7 +252,7 @@ public class DemoMessageStore {
             if (isByte == 0) {
                 body = new byte[inBuffer.get()];
             } else {
-                body = new byte[inBuffer.getShort()];
+                body = new byte[inBuffer.getInt()];
             }
             inBuffer.get(body);
 
