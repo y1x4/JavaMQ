@@ -93,12 +93,15 @@ public class DemoMessageStore {
 
             // write body's length, byte[]
             int bodyLen = msg.getBody().length;
-            if (bodyLen <= 127) {
+            if (bodyLen <= Byte.MAX_VALUE) {
                 out.writeByte(0);
                 out.writeByte(bodyLen);
-            } else {
+            } else if (bodyLen <= Short.MAX_VALUE){
                 out.writeByte(1);  // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
                 out.writeShort(bodyLen);
+            } else {
+                out.writeByte(2);
+                out.writeInt(bodyLen);
             }
             out.write(msg.getBody());
 
@@ -251,12 +254,14 @@ public class DemoMessageStore {
             }
 
             // 读取 body 部分
-            byte isByte = inBuffer.get();
+            byte type = inBuffer.get();
             byte[] body;
-            if (isByte == 0) {
+            if (type == 0) {
                 body = new byte[inBuffer.get()];
-            } else {
+            } else if (type == 1){
                 body = new byte[inBuffer.getShort()];
+            } else {
+                body = new byte[inBuffer.getInt()];
             }
             inBuffer.get(body);
 
