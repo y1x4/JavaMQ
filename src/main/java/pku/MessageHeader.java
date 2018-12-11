@@ -10,32 +10,59 @@ import java.util.Map;
  */
 public class MessageHeader {
 
-    // 0 int, 1 long, 2 double, 3 string
+    // 0-3 int, 4-7 long, 8-9 double, 10-15 string
     private static final Map<String, Integer> typeMap = new HashMap<String, Integer>(){{
         put(MESSAGE_ID, 0);
-        put(TIMEOUT, 0);
-        put(PRIORITY, 0);
-        put(RELIABILITY, 0);
+        put(TIMEOUT, 1);
+        put(PRIORITY, 2);
+        put(RELIABILITY, 3);
 
-        put(BORN_TIMESTAMP, 1);
-        put(STORE_TIMESTAMP, 1);
-        put(START_TIME, 1);
-        put(STOP_TIME, 1);
+        put(BORN_TIMESTAMP, 4);
+        put(STORE_TIMESTAMP, 5);
+        put(START_TIME, 6);
+        put(STOP_TIME, 7);
 
-        put(SHARDING_KEY, 2);
-        put(SHARDING_PARTITION, 2);
+        put(SHARDING_KEY, 8);
+        put(SHARDING_PARTITION, 9);
 
-        put(TOPIC, 3);
-        put(BORN_HOST, 3);
-        put(STORE_HOST, 3);
-        put(SEARCH_KEY, 3);
-        put(SCHEDULE_EXPRESSION, 3);
-        put(TRACE_ID, 3);
+        put(TOPIC, 10);
+        put(BORN_HOST, 11);
+        put(STORE_HOST, 12);
+        put(SEARCH_KEY, 13);
+        put(SCHEDULE_EXPRESSION, 14);
+        put(TRACE_ID, 15);
+    }};
+
+    private static final Map<Integer, String> headMap = new HashMap<Integer, String>(){{
+        put(0, MESSAGE_ID);
+        put(1, TIMEOUT);
+        put(2, PRIORITY);
+        put(3, RELIABILITY);
+
+        put(4, BORN_TIMESTAMP);
+        put(5, STORE_TIMESTAMP);
+        put(6, START_TIME);
+        put(7, STOP_TIME);
+
+        put(8, SHARDING_KEY);
+        put(9, SHARDING_PARTITION);
+
+        put(10, TOPIC);
+        put(11, BORN_HOST);
+        put(12, STORE_HOST);
+        put(13, SEARCH_KEY);
+        put(14, SCHEDULE_EXPRESSION);
+        put(15, TRACE_ID);
     }};
 
     // get headers' type
-    public static int getHeaderType(String header) {
+    public static int getHeaderIndex(String header) {
         return typeMap.get(header);
+    }
+
+
+    public static String getHeader(int index) {
+        return headMap.get(index);
     }
 
     //对于每个producer的唯一标识

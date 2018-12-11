@@ -109,6 +109,7 @@ public class DemoTester {
                         String[] strs = str.split(" ");
                         String topic = strs[0];
                         String prod = strs[1];
+                        // System.out.println(strs[2]);
                         int j = Integer.parseInt(strs[2]);
                         String mapkey = topic+" "+prod;
                         if (!posTable.containsKey(mapkey)) {
@@ -147,7 +148,7 @@ public class DemoTester {
 
         }
     }
-    static Random rand = new Random(100);
+    static Random rand = new Random(1000);
 
     static void testPush()throws Exception{
         // topic的名字是topic+序号的形式

@@ -4,13 +4,13 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * 生产者
+ * 生产者: 依次遍历 topics 每个 topic 生产 PUSH_COUNT 个消息
  */
 public class Producer {
 
     private Set<String> topics = new HashSet<>();
 
-	//生成一个指定topic的message返回
+	// 生成一个指定topic的message返回
     public ByteMessage createBytesMessageToTopic(String topic, byte[] body) {
         topics.add(topic);
 

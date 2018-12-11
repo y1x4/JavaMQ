@@ -15,11 +15,11 @@ public class DemoMessageStore {
 
 	HashMap<String, DataOutputStream> outMap = new HashMap<>();
     HashMap<String, DataInputStream> inMap  = new HashMap<>();
-    HashMap<String, MappedByteBuffer> mbbMap  = new HashMap<>();
+    HashMap<String, MappedByteBuffer> bufferMap  = new HashMap<>();
 
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
     DataInputStream in;     // 按 queue + topic 读取 不同 topic 文件
-    MappedByteBuffer inMbb;
+    MappedByteBuffer inBuffer;
 
 	// 加锁保证线程安全
 	/**
@@ -44,11 +44,30 @@ public class DemoMessageStore {
 
             out.writeByte(msg.headers().getMap().size());
 
-
-            // write headers' keyLength, keyBytes, valueLength, valueBytes
+            // write headers' key index, valueLength, valueBytes
             for (Map.Entry<String, Object> entry : msg.headers().getMap().entrySet()) {
                 String headerKey = entry.getKey();
 
+                int index = MessageHeader.getHeaderIndex(headerKey);
+                out.writeByte(index);
+
+                // 0-3, 4-7, 8-9, 10-15
+                if (index <= 3) {
+                    //out.writeByte(4); // 知道int数据类型长度，不需要存
+                    out.writeInt((int) entry.getValue());
+                } else if (index <= 7) {
+                    //out.writeByte(8);
+                    out.writeLong((long) entry.getValue());
+                } else if (index <= 9) {
+                    //out.writeByte(8);
+                    out.writeDouble((double) entry.getValue());
+                } else {
+                    String strVal = (String) entry.getValue();
+                    out.writeByte(strVal.getBytes().length);
+                    out.write(strVal.getBytes());
+                }
+
+                /*
                 out.writeByte(headerKey.getBytes().length); // kLen
                 out.write(headerKey.getBytes());
 
@@ -67,7 +86,8 @@ public class DemoMessageStore {
                     String strVal = (String) entry.getValue();
                     out.writeByte(strVal.getBytes().length);
                     out.write(strVal.getBytes());
-                }
+                }*/
+
             }
 
             // write body's length, byte[]
@@ -118,7 +138,7 @@ public class DemoMessageStore {
 
                 // 0 int, 1 long, 2 double, 3 string
                 // System.out.println(headerKey);
-                int headerType = MessageHeader.getHeaderType(headerKey);
+                int headerType = MessageHeader.getHeaderIndex(headerKey);
 
                 if (headerType == 0) {
                     headers.put(headerKey, in.readInt());
@@ -165,57 +185,76 @@ public class DemoMessageStore {
                 return null;
 
             String key = queue + topic;
-            if (!mbbMap.containsKey(key)) {
+            if (!bufferMap.containsKey(key)) {
 
                 RandomAccessFile rafi = new RandomAccessFile("./data/" + topic, "r");
                 FileChannel fci = rafi.getChannel();
-                MappedByteBuffer inMbb = fci.map(FileChannel.MapMode.READ_ONLY, 0, fci.size());
+                MappedByteBuffer inBuffer = fci.map(FileChannel.MapMode.READ_ONLY, 0, fci.size());
 
-                mbbMap.put(key, inMbb);
+                bufferMap.put(key, inBuffer);
             }
-            inMbb = mbbMap.get(key);
+            inBuffer = bufferMap.get(key);
 
             // 这个流已经读完
-            if (!inMbb.hasRemaining()) {
-                mbbMap.remove(key);
+            if (!inBuffer.hasRemaining()) {
+                bufferMap.remove(key);
                 return null;
             }
 
             // 读取 headers 部分
             KeyValue headers = new DefaultKeyValue();
-            int headerSize = inMbb.get();
+            int headerSize = inBuffer.get();
             for (int i = 0; i < headerSize; i++) {
-                byte kLen = inMbb.get();    // keyLength
+                int index = inBuffer.get();
+
+                // 0-3, 4-7, 8-9, 10-15
+                if (index <= 3) {
+                    headers.put(MessageHeader.getHeader(index), inBuffer.getInt());
+                } else if (index <= 7) {
+                    headers.put(MessageHeader.getHeader(index), inBuffer.getLong());
+                } else if (index <= 9) {
+                    headers.put(MessageHeader.getHeader(index), inBuffer.getDouble());
+                } else {
+                    byte vLen = inBuffer.get();    // valueLength
+                    byte[] vals = new byte[vLen];    // value
+                    inBuffer.get(vals);
+                    headers.put(MessageHeader.getHeader(index), new String(vals));
+                }
+
+
+                /*
+                byte kLen = inBuffer.get();    // keyLength
                 byte[] bytes = new byte[kLen];
-                inMbb.get(bytes);
+                inBuffer.get(bytes);
                 String headerKey = new String(bytes);   // key
 
                 // 0 int, 1 long, 2 double, 3 string
                 int headerType = MessageHeader.getHeaderType(headerKey);
 
                 if (headerType == 0) {
-                    headers.put(headerKey, inMbb.getInt());
+                    headers.put(headerKey, inBuffer.getInt());
                 } else if (headerType == 1) {
-                    headers.put(headerKey, inMbb.getLong());
+                    headers.put(headerKey, inBuffer.getLong());
                 } else if (headerType == 2) {
-                    headers.put(headerKey, inMbb.getDouble());
+                    headers.put(headerKey, inBuffer.getDouble());
                 } else {
-                    byte vLen = inMbb.get();    // valueLength
+                    byte vLen = inBuffer.get();    // valueLength
                     byte[] vals = new byte[vLen];    // value
-                    inMbb.get(vals);
+                    inBuffer.get(vals);
                     headers.put(headerKey, new String(vals));
                 }
+                */
             }
 
             // 读取 body 部分
-            byte isByte = inMbb.get();
+            byte isByte = inBuffer.get();
             byte[] body;
             if (isByte == 0) {
-                body = new byte[inMbb.get()];
+                body = new byte[inBuffer.get()];
             } else {
-                body = new byte[inMbb.getShort()];
+                body = new byte[inBuffer.getShort()];
             }
-            inMbb.get(body);
+            inBuffer.get(body);
 
             // 组成消息并返回
             ByteMessage msg = new DefaultMessage(body);
