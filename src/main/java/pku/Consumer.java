@@ -77,7 +77,7 @@ public class Consumer {
         ByteMessage re;
 
         do {
-            re = DemoMessageStore.store.pullMBB(queue, topics.get(index));
+            re = DemoMessageStore.store.pull(queue, topics.get(index));
         } while (re == null && ++index < topics.size());
 
         return re;

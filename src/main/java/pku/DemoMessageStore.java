@@ -134,40 +134,39 @@ public class DemoMessageStore {
 
             // 读取 headers 部分
             KeyValue headers = new DefaultKeyValue();
+            headers.put(MessageHeader.TOPIC, topic);    // 直接写入 topic
             int headerSize = in.readByte();
-            for (int i = 0; i < headerSize; i++) {
-                byte kLen = in.readByte();    // keyLength
-                byte[] bytes = new byte[kLen];
-                in.read(bytes);
-                String headerKey = new String(bytes);   // key
+            for (int i = 1; i < headerSize; i++) {  // 少了一轮 topic
+                int index = in.readByte();
 
-                // 0 int, 1 long, 2 double, 3 string
-                // System.out.println(headerKey);
-                int headerType = MessageHeader.getHeaderIndex(headerKey);
-
-                if (headerType == 0) {
-                    headers.put(headerKey, in.readInt());
-                } else if (headerType == 1) {
-                    headers.put(headerKey, in.readLong());
-                } else if (headerType == 2) {
-                    headers.put(headerKey, in.readDouble());
+                // 0-3 int, 4-7 long, 8-9 double, 10-15 string
+                if (index <= 3) {
+                    headers.put(MessageHeader.getHeader(index), in.readInt());
+                } else if (index <= 7) {
+                    headers.put(MessageHeader.getHeader(index), in.readLong());
+                } else if (index <= 9) {
+                    headers.put(MessageHeader.getHeader(index), in.readDouble());
                 } else {
                     byte vLen = in.readByte();    // valueLength
                     byte[] vals = new byte[vLen];    // value
                     in.read(vals);
-                    headers.put(headerKey, new String(vals));
+                    headers.put(MessageHeader.getHeader(index), new String(vals));
                 }
             }
 
+
             // 读取 body 部分
-            byte isByte = in.readByte();
+            byte type = in.readByte();
             byte[] body;
-            if (isByte == 0) {
+            if (type == 0) {
                 body = new byte[in.readByte()];
-            } else {
+            } else if (type == 1) {
                 body = new byte[in.readShort()];
+            } else {
+                body = new byte[in.readInt()];
             }
             in.read(body);
+
 
             // 组成消息并返回
             ByteMessage msg = new DefaultMessage(body);
@@ -227,30 +226,6 @@ public class DemoMessageStore {
                     inBuffer.get(vals);
                     headers.put(MessageHeader.getHeader(index), new String(vals));
                 }
-
-
-                /*
-                byte kLen = inBuffer.get();    // keyLength
-                byte[] bytes = new byte[kLen];
-                inBuffer.get(bytes);
-                String headerKey = new String(bytes);   // key
-
-                // 0 int, 1 long, 2 double, 3 string
-                int headerType = MessageHeader.getHeaderType(headerKey);
-
-                if (headerType == 0) {
-                    headers.put(headerKey, inBuffer.getInt());
-                } else if (headerType == 1) {
-                    headers.put(headerKey, inBuffer.getLong());
-                } else if (headerType == 2) {
-                    headers.put(headerKey, inBuffer.getDouble());
-                } else {
-                    byte vLen = inBuffer.get();    // valueLength
-                    byte[] vals = new byte[vLen];    // value
-                    inBuffer.get(vals);
-                    headers.put(headerKey, new String(vals));
-                }
-                */
             }
 
             // 读取 body 部分
@@ -258,12 +233,13 @@ public class DemoMessageStore {
             byte[] body;
             if (type == 0) {
                 body = new byte[inBuffer.get()];
-            } else if (type == 1){
+            } else if (type == 1) {
                 body = new byte[inBuffer.getShort()];
             } else {
                 body = new byte[inBuffer.getInt()];
             }
             inBuffer.get(body);
+
 
             // 组成消息并返回
             ByteMessage msg = new DefaultMessage(body);
