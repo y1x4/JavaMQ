@@ -50,8 +50,7 @@ public class DemoMessageStore {
                 String headerKey = entry.getKey();
 
                 int len =  headerKey.getBytes().length;
-                byte b = -92;
-                if ((byte) len == b) {
+                if (len > 120) {
                     System.out.println(len);
                     System.out.println((byte) len);
                     System.out.println(headerKey);
