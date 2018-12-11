@@ -3,7 +3,9 @@ package pku;
 import java.io.*;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 这是一个消息队列的内存实现
@@ -16,7 +18,7 @@ public class DemoMessageStore {
     HashMap<String, MappedByteBuffer> mbbMap  = new HashMap<>();
 
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
-    DataInputStream in; // 按 queue + topic 读取 不同 topic 文件
+    DataInputStream in;     // 按 queue + topic 读取 不同 topic 文件
     MappedByteBuffer inMbb;
 
 	// 加锁保证线程安全
@@ -61,12 +63,10 @@ public class DemoMessageStore {
                 } else if (headerType == 2) {
                     //out.writeByte(8);
                     out.writeDouble((double) entry.getValue());
-                } else if (headerType == 3){
+                } else {
                     String strVal = (String) entry.getValue();
                     out.writeByte(strVal.getBytes().length);
                     out.write(strVal.getBytes());
-                } else {
-                    System.out.println("key 类型不对");
                 }
             }
 
@@ -76,8 +76,8 @@ public class DemoMessageStore {
                 out.writeByte(0);
                 out.writeByte(bodyLen);
             } else {
-                out.writeByte(-1);  // body[] 的长度 > 127，即超过byte，先存入 -1 ，再存入用int表示的长度
-                out.writeInt(bodyLen);
+                out.writeByte(1);  // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
+                out.writeShort(bodyLen);
             }
             out.write(msg.getBody());
 
@@ -126,13 +126,11 @@ public class DemoMessageStore {
                     headers.put(headerKey, in.readLong());
                 } else if (headerType == 2) {
                     headers.put(headerKey, in.readDouble());
-                } else if (headerType == 3){
+                } else {
                     byte vLen = in.readByte();    // valueLength
                     byte[] vals = new byte[vLen];    // value
                     in.read(vals);
                     headers.put(headerKey, new String(vals));
-                } else {
-                    System.out.println("key 类型不对");
                 }
             }
 
@@ -142,23 +140,9 @@ public class DemoMessageStore {
             if (isByte == 0) {
                 body = new byte[in.readByte()];
             } else {
-                body = new byte[in.readInt()];
+                body = new byte[in.readShort()];
             }
             in.read(body);
-
-            /*
-            byte check = in.readByte();
-            if (check != -1) {
-                System.out.println(headerSize);
-                System.out.println(Arrays.toString(headers.getMap().entrySet().toArray()));
-                System.out.println(bodyLen);
-                System.out.println(Arrays.toString(body));
-                System.out.println(check);
-                System.out.println(cnt);
-            }
-
-            cnt++;*/
-
 
             // 组成消息并返回
             ByteMessage msg = new DefaultMessage(body);
@@ -194,7 +178,6 @@ public class DemoMessageStore {
             // 这个流已经读完
             if (!inMbb.hasRemaining()) {
                 mbbMap.remove(key);
-                // System.out.println(key);
                 return null;
             }
 
@@ -208,7 +191,6 @@ public class DemoMessageStore {
                 String headerKey = new String(bytes);   // key
 
                 // 0 int, 1 long, 2 double, 3 string
-                // System.out.println(headerKey);
                 int headerType = MessageHeader.getHeaderType(headerKey);
 
                 if (headerType == 0) {
@@ -225,15 +207,13 @@ public class DemoMessageStore {
                 }
             }
 
-
-
             // 读取 body 部分
             byte isByte = inMbb.get();
             byte[] body;
             if (isByte == 0) {
                 body = new byte[inMbb.get()];
             } else {
-                body = new byte[inMbb.getInt()];
+                body = new byte[inMbb.getShort()];
             }
             inMbb.get(body);
 
@@ -247,6 +227,7 @@ public class DemoMessageStore {
             return null;
         }
     }
+
 
 
     // flush

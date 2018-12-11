@@ -147,7 +147,7 @@ public class DemoTester {
 
         }
     }
-    static Random rand = new Random(1000);
+    static Random rand = new Random(100);
 
     static void testPush()throws Exception{
         // topic的名字是topic+序号的形式
@@ -199,7 +199,6 @@ public class DemoTester {
     }
 
     public static void main(String args[]) {
-
         try {
             testPush();
             testPull();

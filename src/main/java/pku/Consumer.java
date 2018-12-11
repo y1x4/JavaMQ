@@ -49,8 +49,6 @@ public class Consumer {
             re = DemoMessageStore.store.pullMBB(queue, topics.get(index));
         } while (re == null && ++index < topics.size());
 
-
-
         return re;
     }
 
