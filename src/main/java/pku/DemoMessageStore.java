@@ -49,13 +49,7 @@ public class DemoMessageStore {
             for (Map.Entry<String, Object> entry : msg.headers().getMap().entrySet()) {
                 String headerKey = entry.getKey();
 
-                int kLen =  headerKey.getBytes().length;
-                if (kLen > 120) {
-                    System.out.println(kLen);
-                    System.out.println((byte) kLen);
-                    System.out.println(headerKey);
-                }
-                out.writeByte(kLen);
+                out.writeByte(headerKey.getBytes().length); // kLen
                 out.write(headerKey.getBytes());
 
                 // headerType: 0 int, 1 long, 2 double, 3 string
@@ -79,7 +73,7 @@ public class DemoMessageStore {
             }
 
             // write body's length, byte[]
-            out.writeByte(msg.getBody().length);
+            out.writeInt(msg.getBody().length);
             out.write(msg.getBody());
             out.writeByte(-1);
 
@@ -143,11 +137,12 @@ public class DemoMessageStore {
             }
 
             // 读取 body 部分
-            byte bodyLen = in.readByte();
+            int bodyLen = in.readInt();
             byte[] body = new byte[bodyLen];
             in.read(body);
             byte check = in.readByte();
             if (check != -1) {
+                System.out.println(headerSize);
                 System.out.println(Arrays.toString(headers.getMap().entrySet().toArray()));
                 System.out.println(bodyLen);
                 System.out.println(Arrays.toString(body));
