@@ -3,9 +3,7 @@ package pku;
 import java.io.*;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 这是一个消息队列的内存实现
@@ -150,6 +148,9 @@ public class DemoMessageStore {
             in.read(body);
             byte check = in.readByte();
             if (check != -1) {
+                System.out.println(Arrays.toString(headers.getMap().entrySet().toArray()));
+                System.out.println(bodyLen);
+                System.out.println(Arrays.toString(body));
                 System.out.println(check);
                 System.out.println(cnt);
             }
