@@ -43,19 +43,21 @@ public class DemoMessageStore {
             }
             out = outMap.get(topic);
 
-            out.writeByte((byte) msg.headers().getMap().size());
+
+            out.writeByte(msg.headers().getMap().size());
+
 
             // write headers' keyLength, keyBytes, valueLength, valueBytes
             for (Map.Entry<String, Object> entry : msg.headers().getMap().entrySet()) {
                 String headerKey = entry.getKey();
 
-                int len =  headerKey.getBytes().length;
-                if (len > 120) {
-                    System.out.println(len);
-                    System.out.println((byte) len);
+                int kLen =  headerKey.getBytes().length;
+                if (kLen > 120) {
+                    System.out.println(kLen);
+                    System.out.println((byte) kLen);
                     System.out.println(headerKey);
                 }
-                out.writeByte((byte) len);
+                out.writeByte(kLen);
                 out.write(headerKey.getBytes());
 
                 // headerType: 0 int, 1 long, 2 double, 3 string
@@ -69,15 +71,17 @@ public class DemoMessageStore {
                 } else if (headerType == 2) {
                     //out.writeByte(8);
                     out.writeDouble((double) entry.getValue());
-                } else {
+                } else if (headerType == 3){
                     String strVal = (String) entry.getValue();
-                    out.writeByte((byte) strVal.getBytes().length);
+                    out.writeByte(strVal.getBytes().length);
                     out.write(strVal.getBytes());
+                } else {
+                    System.out.println("key 类型不对");
                 }
             }
 
             // write body's length, byte[]
-            out.writeByte((byte) msg.getBody().length);
+            out.writeByte(msg.getBody().length);
             out.write(msg.getBody());
             out.writeByte(-1);
 
@@ -130,11 +134,13 @@ public class DemoMessageStore {
                     headers.put(headerKey, in.readLong());
                 } else if (headerType == 2) {
                     headers.put(headerKey, in.readDouble());
-                } else {
+                } else if (headerType == 3){
                     byte vLen = in.readByte();    // valueLength
                     byte[] vals = new byte[vLen];    // value
                     in.read(vals);
                     headers.put(headerKey, new String(vals));
+                } else {
+                    System.out.println("key 类型不对");
                 }
             }
 
@@ -147,7 +153,6 @@ public class DemoMessageStore {
                 System.out.println(check);
                 System.out.println(cnt);
             }
-
 
             cnt++;
 

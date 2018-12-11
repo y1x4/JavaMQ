@@ -33,7 +33,7 @@ public class MessageHeader {
         put(TRACE_ID, 3);
     }};
 
-    // get headers' type and its length to byte, string using -1
+    // get headers' type
     public static int getHeaderType(String header) {
         return typeMap.get(header);
     }
