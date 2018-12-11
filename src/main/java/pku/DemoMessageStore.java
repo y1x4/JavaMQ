@@ -79,6 +79,7 @@ public class DemoMessageStore {
             // write body's length, byte[]
             out.writeByte((byte) msg.getBody().length);
             out.write(msg.getBody());
+            out.writeByte(-1);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -141,6 +142,11 @@ public class DemoMessageStore {
             byte bodyLen = in.readByte();
             byte[] body = new byte[bodyLen];
             in.read(body);
+            byte check = in.readByte();
+            if (check != -1) {
+                System.out.println(check);
+                System.out.println(cnt);
+            }
 
 
             cnt++;
