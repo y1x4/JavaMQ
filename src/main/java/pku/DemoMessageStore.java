@@ -98,7 +98,7 @@ public class DemoMessageStore {
                 out.writeByte(bodyLen);
             } else {
                 out.writeByte(1);  // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
-                out.writeInt(bodyLen);
+                out.writeShort(bodyLen);
             }
             out.write(msg.getBody());
 
@@ -256,7 +256,7 @@ public class DemoMessageStore {
             if (isByte == 0) {
                 body = new byte[inBuffer.get()];
             } else {
-                body = new byte[inBuffer.getInt()];
+                body = new byte[inBuffer.getShort()];
             }
             inBuffer.get(body);
 
