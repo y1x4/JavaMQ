@@ -42,12 +42,14 @@ public class Consumer {
         */
 
 
-        // 依次读取 topic 所有内容，updated by yixuwang 2018-12-10 14:38:18
+        // 依次读取 topic 所有内容
         ByteMessage re;
 
         do {
-            re = DemoMessageStore.store.pull(queue, topics.get(index));
+            re = DemoMessageStore.store.pullMBB(queue, topics.get(index));
         } while (re == null && ++index < topics.size());
+
+
 
         return re;
     }

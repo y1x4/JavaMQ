@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class DemoTester {
     // 每个pusher向每个topic发送的消息数目
-    static int PUSH_COUNT = 1000;
+    static int PUSH_COUNT = 100000;
     // 发送消息的线程数
     static int PUSH_THREAD_COUNT = 4;
     // 发送线程往n个topic发消息
@@ -60,7 +60,6 @@ public class DemoTester {
                         msg.putHeaders(MessageHeader.MESSAGE_ID, 0);
                         msg.putHeaders(MessageHeader.BORN_TIMESTAMP, 1L);
                         msg.putHeaders(MessageHeader.SHARDING_PARTITION, 2.0);
-                        msg.putHeaders(MessageHeader.SHARDING_KEY, 3.0);
                         msg.putHeaders(MessageHeader.SEARCH_KEY, "hello");
                         // 发送消息
                         producer.send(msg);
@@ -129,10 +128,6 @@ public class DemoTester {
                             System.exit(0);
                         }
                         if (msg.headers().getDouble(MessageHeader.SHARDING_PARTITION) != 2.0) {
-                            System.out.println(String.format("header错误3 topic %s 序号:%d", topic, j));
-                            System.exit(0);
-                        }
-                        if (msg.headers().getDouble(MessageHeader.SHARDING_KEY) != 3.0) {
                             System.out.println(String.format("header错误3 topic %s 序号:%d", topic, j));
                             System.exit(0);
                         }

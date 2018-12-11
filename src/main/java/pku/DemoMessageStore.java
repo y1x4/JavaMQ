@@ -19,8 +19,6 @@ public class DemoMessageStore {
     DataInputStream in; // 按 queue + topic 读取 不同 topic 文件
     MappedByteBuffer inMbb;
 
-    int cnt = 0;
-
 	// 加锁保证线程安全
 	/**
 	 * @param msg
@@ -73,9 +71,15 @@ public class DemoMessageStore {
             }
 
             // write body's length, byte[]
-            out.writeInt(msg.getBody().length);
+            int bodyLen = msg.getBody().length;
+            if (bodyLen <= 127) {
+                out.writeByte(0);
+                out.writeByte(bodyLen);
+            } else {
+                out.writeByte(-1);  // body[] 的长度 > 127，即超过byte，先存入 -1 ，再存入用int表示的长度
+                out.writeInt(bodyLen);
+            }
             out.write(msg.getBody());
-            out.writeByte(-1);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -108,10 +112,6 @@ public class DemoMessageStore {
             int headerSize = in.readByte();
             for (int i = 0; i < headerSize; i++) {
                 byte kLen = in.readByte();    // keyLength
-                if (kLen <= 0) {
-                    System.out.println(kLen);   // -92 ?
-                    System.out.println(cnt);
-                }
                 byte[] bytes = new byte[kLen];
                 in.read(bytes);
                 String headerKey = new String(bytes);   // key
@@ -137,9 +137,16 @@ public class DemoMessageStore {
             }
 
             // 读取 body 部分
-            int bodyLen = in.readInt();
-            byte[] body = new byte[bodyLen];
+            byte isByte = in.readByte();
+            byte[] body;
+            if (isByte == 0) {
+                body = new byte[in.readByte()];
+            } else {
+                body = new byte[in.readInt()];
+            }
             in.read(body);
+
+            /*
             byte check = in.readByte();
             if (check != -1) {
                 System.out.println(headerSize);
@@ -150,7 +157,7 @@ public class DemoMessageStore {
                 System.out.println(cnt);
             }
 
-            cnt++;
+            cnt++;*/
 
 
             // 组成消息并返回
@@ -196,10 +203,6 @@ public class DemoMessageStore {
             int headerSize = inMbb.get();
             for (int i = 0; i < headerSize; i++) {
                 byte kLen = inMbb.get();    // keyLength
-                if (kLen <= 0) {
-                    System.out.println(kLen);
-                    System.out.println(cnt);
-                }
                 byte[] bytes = new byte[kLen];
                 inMbb.get(bytes);
                 String headerKey = new String(bytes);   // key
@@ -222,12 +225,17 @@ public class DemoMessageStore {
                 }
             }
 
-            // 读取 body 部分
-            byte bodyLen = inMbb.get();
-            byte[] body = new byte[bodyLen];
-            inMbb.get(body);
 
-            cnt++;
+
+            // 读取 body 部分
+            byte isByte = inMbb.get();
+            byte[] body;
+            if (isByte == 0) {
+                body = new byte[inMbb.get()];
+            } else {
+                body = new byte[inMbb.getInt()];
+            }
+            inMbb.get(body);
 
             // 组成消息并返回
             ByteMessage msg = new DefaultMessage(body);
