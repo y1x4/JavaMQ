@@ -45,10 +45,11 @@ public class DemoMessageStore {
             // write headers —— size, key index, valueLength, valueBytes
             out.writeByte(msg.headers().getMap().size());
 
+            String headerKey;
             for (Map.Entry<String, Object> entry : msg.headers().getMap().entrySet()) {
-                String headerKey = entry.getKey();
-
+                headerKey = entry.getKey();
                 int index = MessageHeader.getHeaderIndex(headerKey);
+                if (index == 10) continue;  // 不需要写入TOPIC，读取时根据文件名加入
                 out.writeByte(index);
 
                 // 0-3, 4-7, 8-9, 10-15
@@ -106,6 +107,7 @@ public class DemoMessageStore {
         }
 
 	}
+
 
 	// 加锁保证线程安全
 	public synchronized ByteMessage pull(String queue, String topic) {
@@ -201,10 +203,12 @@ public class DemoMessageStore {
                 return null;
             }
 
+
             // 读取 headers 部分
             KeyValue headers = new DefaultKeyValue();
+            headers.put(MessageHeader.TOPIC, topic);    // 直接写入 topic
             int headerSize = inBuffer.get();
-            for (int i = 0; i < headerSize; i++) {
+            for (int i = 1; i < headerSize; i++) {  // 少了一轮 topic
                 int index = inBuffer.get();
 
                 // 0-3 int, 4-7 long, 8-9 double, 10-15 string
