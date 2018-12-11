@@ -49,7 +49,14 @@ public class DemoMessageStore {
             for (Map.Entry<String, Object> entry : msg.headers().getMap().entrySet()) {
                 String headerKey = entry.getKey();
 
-                out.writeByte(headerKey.getBytes().length);
+                int len =  headerKey.getBytes().length;
+                byte b = -92;
+                if ((byte) len == b) {
+                    System.out.println(len);
+                    System.out.println((byte) len);
+                    System.out.println(headerKey);
+                }
+                out.writeByte((byte) len);
                 out.write(headerKey.getBytes());
 
                 // headerType: 0 int, 1 long, 2 double, 3 string
