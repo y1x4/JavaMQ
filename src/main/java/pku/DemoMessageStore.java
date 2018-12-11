@@ -182,7 +182,7 @@ public class DemoMessageStore {
 
 
     // 加锁保证线程安全
-    public synchronized ByteMessage pullMBB(String queue, String topic) {
+    public synchronized ByteMessage pullBuffer(String queue, String topic) {
         try {
 
             if (! new File("./data/" + topic).exists()) // 不存在此 topic 文件
