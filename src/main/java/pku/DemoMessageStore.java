@@ -1,10 +1,13 @@
 package pku;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
 /**
  * 这是一个消息队列的内存实现
@@ -15,16 +18,21 @@ public class DemoMessageStore {
 	HashMap<String, DataOutputStream> outMap = new HashMap<>();
     HashMap<String, MappedByteBuffer> inMap  = new HashMap<>();
 
+
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
     MappedByteBuffer in;     // 按 queue + topic 读取 不同 topic 文件
 
+    static final int BUFFER_CAPACITY = 4660 * 1024;
+
+    HashMap<String, ByteBuffer> bufferMap = new HashMap<>();
+    HashMap<String, OutputStream> outputMap = new HashMap<>();
+    ByteBuffer buf;
+    OutputStream output;
+
     private static final String FILE_DIR = "./data/";
 
+
 	// 加锁保证线程安全
-	/**
-	 * @param msg
-	 * @param topic
-	 */
 	public synchronized void push(ByteMessage msg, String topic) {
 		if (msg == null)
 			return;
@@ -111,12 +119,12 @@ public class DemoMessageStore {
                 out.writeByte(2);
                 out.writeInt(bodyLen);
             }
+
             out.write(msg.getBody());
 
         } catch (IOException e) {
             e.printStackTrace();
         }
-
 	}
 
 
@@ -223,6 +231,192 @@ public class DemoMessageStore {
 
 
 
+
+
+    // 加锁保证线程安全
+    public synchronized void bufferPush(ByteMessage msg, String topic) {
+        if (msg == null)
+            return;
+
+        try {
+            // 获取写入流
+            out = outMap.get(topic);
+            if (out == null) {
+                File file = new File("./data/" + topic);
+                // if (file.exists()) file.delete();
+
+                buf = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
+                output = new BufferedOutputStream(new FileOutputStream(file, true), BUFFER_CAPACITY);
+                bufferMap.put(topic, buf);
+                outputMap.put(topic, output);
+            }
+
+
+            // use short to record header keys, except TOPIC
+            KeyValue headers = msg.headers();
+            short key = 0;
+            for (int i = 0; i < 15; i++) {
+                key = (short) (key << 1);
+                if (headers.containsKey(MessageHeader.getHeader(14 - i)))
+                    key = (short) (key | 1);
+            }
+            buf.putShort(key);
+            for (int i = 0; i < 4; i++) {
+                if ((key >> i & 1) == 1)
+                    buf.putInt(headers.getInt(MessageHeader.getHeader(i)));
+            }
+            for (int i = 4; i < 8; i++) {
+                if ((key >> i & 1) == 1)
+                    buf.putLong(headers.getLong(MessageHeader.getHeader(i)));
+            }
+            for (int i = 8; i < 10; i++) {
+                if ((key >> i & 1) == 1)
+                    buf.putDouble(headers.getDouble(MessageHeader.getHeader(i)));
+            }
+            for (int i = 11; i < 15; i++) {
+                if ((key >> i & 1) == 1) {
+                    String strVal = headers.getString(MessageHeader.getHeader(i));
+                    buf.put((byte) strVal.getBytes().length);
+                    buf.put(strVal.getBytes());
+                }
+            }
+
+
+            // write body's length, byte[]
+            int bodyLen = msg.getBody().length;
+            if (bodyLen <= Byte.MAX_VALUE) {
+                buf.put((byte) 0);
+                buf.put((byte) bodyLen);
+            } else if (bodyLen <= Short.MAX_VALUE){
+                buf.put((byte) 1);  // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
+                buf.putShort((short) bodyLen);
+            } else {
+                buf.put((byte) 2);
+                buf.putInt(bodyLen);
+            }
+            buf.put(msg.getBody());
+
+
+            // 如果 buffer 剩余空间不足，先写入此 buffer
+            if (buf.remaining() <= 201 * 1024) {
+
+                System.out.println("----------------");
+                write();
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void write() throws Exception {
+        if (buf.remaining() == BUFFER_CAPACITY) {
+            return;
+        }
+
+        buf.putShort((short) -1);//17 means to be continue
+        byte[] bytes = new byte[buf.position()];
+        buf.position(0);
+        buf.get(bytes);
+        // bytes = compress(bytes);
+        writeInt(bytes.length);
+        output.write(bytes, 0, bytes.length);
+        //output.flush();
+        buf.clear();
+    }
+
+    public void writeInt(int a) throws Exception{
+        byte[] b = new byte[]{
+                (byte) ((a >> 24) & 0xFF),
+                (byte) ((a >> 16) & 0xFF),
+                (byte) ((a >> 8) & 0xFF),
+                (byte) (a & 0xFF)};
+        output.write(b, 0, 4);
+    }
+
+
+
+    public static byte[] compress(byte[] data) {
+        byte[] output = new byte[0];
+
+        Deflater compresser = new Deflater();
+        compresser.setLevel(1);
+        //compress.setStrategy(2);
+        compresser.reset();
+        compresser.setInput(data);
+        compresser.finish();
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(data.length);
+        try {
+            byte[] buf = new byte[5 * 1024];
+            while (!compresser.finished()) {
+                int i = compresser.deflate(buf);
+                bos.write(buf, 0, i);
+            }
+            output = bos.toByteArray();
+        } catch (Exception e) {
+            output = data;
+            e.printStackTrace();
+        } finally {
+            try {
+                bos.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        compresser.end();
+        return output;
+    }
+
+
+    public static byte[] decompress(byte[] data) {
+        byte[] output = new byte[0];
+
+        Inflater decompresser = new Inflater();
+        decompresser.reset();
+        decompresser.setInput(data);
+
+        ByteArrayOutputStream o = new ByteArrayOutputStream(data.length);
+        try {
+            byte[] buf = new byte[1024 * 5];
+            while (!decompresser.finished()) {
+                int i = decompresser.inflate(buf);
+                o.write(buf, 0, i);
+            }
+            output = o.toByteArray();
+        } catch (Exception e) {
+            output = data;
+            e.printStackTrace();
+        } finally {
+            try {
+                o.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        decompresser.end();
+        return output;
+    }
+
+
+
+    // buffer flush
+    public void bFlush(Set<String> topics) {
+        try {
+            for (String topic : topics) {
+                buf    = bufferMap.get(topic);
+                output = outputMap.get(topic);
+                write();
+                // writeInt(-1); 没有了返回 -1
+                output.flush();
+                //output.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
     // flush
 	public void flush(Set<String> topics) {
         DataOutputStream out;
@@ -235,4 +429,5 @@ public class DemoMessageStore {
             e.printStackTrace();
         }
     }
+
 }
