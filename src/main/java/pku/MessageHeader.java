@@ -10,6 +10,8 @@ import java.util.Map;
  */
 public class MessageHeader {
 
+    // 使用 short 的16位表示 header key
+
     // 0-3 int, 4-7 long, 8-9 double, 10-15 string
     private static final Map<String, Integer> typeMap = new HashMap<String, Integer>(){{
         put(MESSAGE_ID, 0);
