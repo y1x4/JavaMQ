@@ -42,6 +42,7 @@ public class Consumer {
     //每次消费读取一个message
     public synchronized ByteMessage poll() {
 
+ /*
         ByteMessage re = null;
         //先读第一个topic, 再读第二个topic...
         //直到所有topic都读完了, 返回null, 表示无消息
@@ -55,7 +56,6 @@ public class Consumer {
         }
         return re;
 
- /*
 
         MessageReader reader = readers.get(pollIndex);
         ByteMessage message = reader.readMessage();
@@ -70,6 +70,7 @@ public class Consumer {
             pollIndex = (pollIndex + 1) % readers.size();
         }
         return message;
+        */
 
 
         // 依次读取 topic 所有内容
@@ -80,7 +81,6 @@ public class Consumer {
         } while (re == null && ++index < topics.size());
 
         return re;
-        */
 
     }
 

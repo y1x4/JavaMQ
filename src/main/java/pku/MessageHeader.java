@@ -27,12 +27,12 @@ public class MessageHeader {
         put(SHARDING_KEY, 8);
         put(SHARDING_PARTITION, 9);
 
-        put(TOPIC, 10);
-        put(BORN_HOST, 11);
-        put(STORE_HOST, 12);
-        put(SEARCH_KEY, 13);
-        put(SCHEDULE_EXPRESSION, 14);
-        put(TRACE_ID, 15);
+        put(BORN_HOST, 10);
+        put(STORE_HOST, 11);
+        put(SEARCH_KEY, 12);
+        put(SCHEDULE_EXPRESSION, 13);
+        put(TRACE_ID, 14);
+        put(TOPIC, 15);
     }};
 
     private static final Map<Integer, String> headMap = new HashMap<Integer, String>(){{
@@ -49,12 +49,12 @@ public class MessageHeader {
         put(8, SHARDING_KEY);
         put(9, SHARDING_PARTITION);
 
-        put(10, TOPIC);
-        put(11, BORN_HOST);
-        put(12, STORE_HOST);
-        put(13, SEARCH_KEY);
-        put(14, SCHEDULE_EXPRESSION);
-        put(15, TRACE_ID);
+        put(10, BORN_HOST);
+        put(11, STORE_HOST);
+        put(12, SEARCH_KEY);
+        put(13, SCHEDULE_EXPRESSION);
+        put(14, TRACE_ID);
+        put(15, TOPIC);
     }};
 
     // get headers' type

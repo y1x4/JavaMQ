@@ -1,202 +1,238 @@
 package pku;
 
-
-import java.io.File;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.HashMap;
+import java.util.Set;
 
+/**
+ * 这是一个消息队列的内存实现
+ */
 public class DemoMessageStore {
-    private final static int LENGTH =128*1024*1024;
-    private final static int MSG_LENGTH =256*1024;
-    private final static int MORE_LENGTH=8*1024*1024;
-    public static final DemoMessageStore store = new DemoMessageStore();
-    private HashMap<String, MappedByteBuffer> fileout = new HashMap<>();
-    private HashMap<String, MappedByteBuffer> filein = new HashMap<>();
-    private HashMap<String, Integer> topicLen = new HashMap<>();  //每个topic文件的字节数
+	static final DemoMessageStore store = new DemoMessageStore();
 
-    String dir="./data/";
-    public synchronized void push(ByteMessage msg, String topic) {
+	HashMap<String, DataOutputStream> outMap = new HashMap<>();
+    HashMap<String, MappedByteBuffer> inMap  = new HashMap<>();
+
+    DataOutputStream out;   // 按 topic 写入不同 topic 文件
+    MappedByteBuffer in;     // 按 queue + topic 读取 不同 topic 文件
+
+    private static final String FILE_DIR = "./data/";
+
+	// 加锁保证线程安全
+	/**
+	 * @param msg
+	 * @param topic
+	 */
+	public synchronized void push(ByteMessage msg, String topic) {
+		if (msg == null)
+			return;
+
         try {
+            // 获取写入流
+            if (!outMap.containsKey(topic)) {
+                File file = new File("./data/" + topic);
+                if (file.exists()) file.delete();
 
-            MappedByteBuffer javahz = null;
-            KeyValue head = msg.headers();       //获取消息头部类
-            byte[] body = msg.getBody();         //获取消息body内容
-            if (fileout.containsKey(topic)) {      //如果之前写入过topic,则直接获取MappedByteBuffer
-                javahz = fileout.get(topic);
-            } else {                            //否则创建一个topic文件，并建立内存映射
-                File f = new File(dir + File.separator + topic );
-                javahz = new RandomAccessFile(f, "rw").getChannel().map(FileChannel.MapMode.READ_WRITE, 0, LENGTH);
-                topicLen.put(topic, LENGTH);
+                outMap.put(topic, new DataOutputStream(new BufferedOutputStream(
+                        new FileOutputStream(FILE_DIR + topic,  true))));
             }
+            out = outMap.get(topic);
 
 
-            //每个消息的数据结构：消息头部键值对个数 key值，value值的类型,[value值的字节数],value值，body的长度，body的内容
-            byte size = (byte) head.keySet().size();   //size代表head键值对个数
-            javahz.put(size);//存放消息键值对个数
-            for (String s : head.keySet()) {   //循环放入消息头部键值对
-                javahz.put(keyToByte(s));     //放入key值
-                if (String.class.isInstance(head.getObj(s))) {   //如果字符串类型，放入1,
-                    javahz.put((byte) 1);
-                    String v = head.getString(s);
-                    javahz.put((byte)v.length());   //放入value字节数
-                    javahz.put(v.getBytes());       //放入value的内容
-                } else if (Double.class.isInstance(head.getObj(s))) {  //如果是double类型，放入2，再直接放入value值
-                    javahz.put((byte) 2);
-                    javahz.putDouble(head.getDouble(s));
-                } else if (Integer.class.isInstance(head.getObj(s))) {   //如果是int类型，放入3，再直接放入value值
-                    javahz.put((byte) 3);
-                    javahz.putInt(head.getInt(s));
-                } else if (Long.class.isInstance(head.getObj(s))) { //如果是long类型，放入4，再直接放入value值
-                    javahz.put((byte) 4);
-                    javahz.putLong(head.getLong(s));
+            // use short to record header keys, except TOPIC
+            KeyValue headers = msg.headers();
+            short key = 0;
+            for (int i = 0; i < 15; i++) {
+                key = (short) (key << 1);
+                if (headers.containsKey(MessageHeader.getHeader(14 - i)))
+                    key = (short) (key | 1);
+            }
+            out.writeShort(key);
+            for (int i = 0; i < 4; i++) {
+                if ((key >> i & 1) == 1)
+                    out.writeInt(headers.getInt(MessageHeader.getHeader(i)));
+            }
+            for (int i = 4; i < 8; i++) {
+                if ((key >> i & 1) == 1)
+                    out.writeLong(headers.getLong(MessageHeader.getHeader(i)));
+            }
+            for (int i = 8; i < 10; i++) {
+                if ((key >> i & 1) == 1)
+                    out.writeDouble(headers.getDouble(MessageHeader.getHeader(i)));
+            }
+            for (int i = 11; i < 15; i++) {
+                if ((key >> i & 1) == 1) {
+                    String strVal = headers.getString(MessageHeader.getHeader(i));
+                    out.writeByte(strVal.getBytes().length);
+                    out.write(strVal.getBytes());
                 }
             }
-            javahz.putInt(body.length);   //放入body长度（即body的字节数）
-            javahz.put(body);    //放入body的内容
+/*
 
-            int p = javahz.position();   //记录写入位置，以便扩容
-            int len = topicLen.get(topic);  //获取当前映射文件长度
-            if (p + MSG_LENGTH > len) {    //判断能否存入下一个消息，不能的话需要进行扩容（初始值100MB每次加100MB）
-                File f = new File(dir + File.separator + topic);
-                javahz = new RandomAccessFile(f, "rw").getChannel().map(FileChannel.MapMode.READ_WRITE, 0, len + MORE_LENGTH);
-                javahz.position(p);
-                topicLen.put(topic, len + MORE_LENGTH);
+            // write headers —— size, key index, valueLength, valueBytes
+            out.writeByte(msg.headers().getMap().size());
+            String headerKey;
+            for (Map.Entry<String, Object> entry : msg.headers().getMap().entrySet()) {
+                headerKey = entry.getKey();
+                int index = MessageHeader.getHeaderIndex(headerKey);
+                if (index == 15) continue;  // 不需要写入TOPIC，读取时根据文件名加入
+                out.writeByte(index);
+
+                // 0-3, 4-7, 8-9, 10-15
+                if (index <= 3) {
+                    //out.writeByte(4); // 知道int数据类型长度，不需要存
+                    out.writeInt((int) entry.getValue());
+                } else if (index <= 7) {
+                    //out.writeByte(8);
+                    out.writeLong((long) entry.getValue());
+                } else if (index <= 9) {
+                    //out.writeByte(8);
+                    out.writeDouble((double) entry.getValue());
+                } else {
+                    String strVal = (String) entry.getValue();
+                    out.writeByte(strVal.getBytes().length);
+                    out.write(strVal.getBytes());
+                }
             }
-            fileout.put(topic, javahz);  //保存写入位置
 
+*/
 
-        } catch (Exception e) {
+            // write body's length, byte[]
+            int bodyLen = msg.getBody().length;
+            if (bodyLen <= Byte.MAX_VALUE) {
+                out.writeByte(0);
+                out.writeByte(bodyLen);
+            } else if (bodyLen <= Short.MAX_VALUE){
+                out.writeByte(1);  // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
+                out.writeShort(bodyLen);
+            } else {
+                out.writeByte(2);
+                out.writeInt(bodyLen);
+            }
+            out.write(msg.getBody());
+
+        } catch (IOException e) {
             e.printStackTrace();
         }
-    }
 
+	}
+
+
+    // 加锁保证线程安全
     public synchronized ByteMessage pull(String queue, String topic) {
         try {
 
-            String k = queue + " " + topic;
-            MappedByteBuffer javahz;  //每个k会对应一个内存映射
-            ByteMessage msg = new DefaultMessage(null);  //先生成一个消息
-            if (filein.containsKey(k)) {       // private HashMap<String, MappedByteBuffer> filein = new HashMap<>();
-                javahz = filein.get(k);
-            } else {
-                File f = new File(dir + File.separator + topic );
-                if (!f.exists()) {       //判断topic文件是否存在，不存在的话返回null，否则建立内存映射
+            String inKey = queue + topic;
+            in = inMap.get(inKey);
+            if (in == null) {   // 不含则新建 buffer
+                File file = new File(FILE_DIR + topic );
+                if (!file.exists()) {       //判断topic文件是否存在，不存在的话返回null，否则建立内存映射
                     return null;
                 }
-                FileChannel fc = new RandomAccessFile(f, "r").getChannel();
-                javahz = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
 
+                FileChannel fc = new RandomAccessFile(file, "r").getChannel();
+                in = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
+
+                inMap.put(inKey, in);
             }
-            byte headNum = javahz.get();  //获取head键值对数量
-            if (headNum == 0) {   //如果键值对的个数为0，说明读到文件末尾了，返回null
+
+            // 这个流已经读完
+            if (!in.hasRemaining()) {
+                inMap.remove(inKey);
                 return null;
             }
-            for (byte i = 0; i < headNum; i++) {  //循环获取head键值对
-                String key = byteToKey(javahz.get());
-                byte type = javahz.get();  //获取value的类型
-                if (type == 1) {  //1代表value的值是String类型
-                    byte[] x = new byte[javahz.get()];//获取value值的字节数
-                    javahz.get(x);      //获取value的值
-                    String st = new String(x);
-                    msg.putHeaders(key, st);        //msg放入键值对
-                } else if (type == 2) {            //如果是double类型，则直接放入键值对
-                    msg.putHeaders(key, javahz.getDouble());
-                } else if (type == 3) {              //int类型
-                    msg.putHeaders(key, javahz.getInt());
-                } else if (type == 4) {                             //Long类型
-                    msg.putHeaders(key, javahz.getLong());
+
+
+
+            // 读取 headers 部分
+            KeyValue headers = new DefaultKeyValue();
+            headers.put(MessageHeader.TOPIC, topic);    // 直接写入 topic
+            short key = in.getShort();
+            for (int i = 0; i < 4; i++) {
+                if ((key >> i & 1) == 1)
+                    headers.put(MessageHeader.getHeader(i), in.getInt());
+            }
+            for (int i = 4; i < 8; i++) {
+                if ((key >> i & 1) == 1)
+                    headers.put(MessageHeader.getHeader(i), in.getLong());
+            }
+            for (int i = 8; i < 10; i++) {
+                if ((key >> i & 1) == 1)
+                    headers.put(MessageHeader.getHeader(i), in.getDouble());
+            }
+            for (int i = 11; i < 15; i++) {
+                if ((key >> i & 1) == 1) {
+                    byte vLen = in.get();    // valueLength
+                    byte[] vals = new byte[vLen];    // value
+                    in.get(vals);
+                    headers.put(MessageHeader.getHeader(i), new String(vals));
                 }
             }
-            byte[] body = new byte[javahz.getInt()];    //读取消息body的长度
-            javahz.get(body);                          //获取消息body的数据
-            filein.put(k, javahz);                       //保存读取位置
-            msg.setBody(body);                       //赋值msg的body
+
+
+            /*
+
+            // 读取 headers 部分
+            KeyValue headers = new DefaultKeyValue();
+            headers.put(MessageHeader.TOPIC, topic);    // 直接写入 topic
+            int headerSize = in.get();
+            for (int i = 1; i < headerSize; i++) {  // 少了一轮 topic
+                int index = in.get();
+
+                // 0-3 int, 4-7 long, 8-9 double, 10-15 string
+                if (index <= 3) {
+                    headers.put(MessageHeader.getHeader(index), in.getInt());
+                } else if (index <= 7) {
+                    headers.put(MessageHeader.getHeader(index), in.getLong());
+                } else if (index <= 9) {
+                    headers.put(MessageHeader.getHeader(index), in.getDouble());
+                } else {
+                    byte vLen = in.get();    // valueLength
+                    byte[] vals = new byte[vLen];    // value
+                    in.get(vals);
+                    headers.put(MessageHeader.getHeader(index), new String(vals));
+                }
+            }*/
+
+
+            // 读取 body 部分
+            byte type = in.get();
+            byte[] body;
+            if (type == 0) {
+                body = new byte[in.get()];
+            } else if (type == 1) {
+                body = new byte[in.getShort()];
+            } else {
+                body = new byte[in.getInt()];
+            }
+            in.get(body);
+
+
+            // 组成消息并返回
+            ByteMessage msg = new DefaultMessage(body);
+            msg.setHeaders(headers);
             return msg;
 
-        } catch (Exception e) {
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+
+
+    // flush
+	public void flush(Set<String> topics) {
+        DataOutputStream out;
+        try {
+            for (String topic : topics) {
+                out = outMap.get(topic);
+                out.flush();
+            }
+        } catch (IOException e) {
             e.printStackTrace();
         }
-        return null;
-    }
-
-    public static byte keyToByte(String key) throws Exception {
-        switch (key) {
-            case MessageHeader.TOPIC:
-                return (byte) 'a';
-            case MessageHeader.SEARCH_KEY:
-                return (byte) 'b';
-            case MessageHeader.BORN_HOST:
-                return (byte) 'c';
-            case MessageHeader.BORN_TIMESTAMP:
-                return (byte) 'd';
-            case MessageHeader.MESSAGE_ID:
-                return (byte) 'e';
-            case MessageHeader.PRIORITY:
-                return (byte) 'f';
-            case MessageHeader.RELIABILITY:
-                return (byte) 'g';
-            case MessageHeader.SCHEDULE_EXPRESSION:
-                return (byte) 'h';
-            case MessageHeader.SHARDING_KEY:
-                return (byte) 'i';
-            case MessageHeader.SHARDING_PARTITION:
-                return (byte) 'j';
-            case MessageHeader.START_TIME:
-                return (byte) 'k';
-            case MessageHeader.STOP_TIME:
-                return (byte) 'l';
-            case MessageHeader.STORE_HOST:
-                return (byte) 'm';
-            case MessageHeader.STORE_TIMESTAMP:
-                return (byte) 'n';
-            case MessageHeader.TIMEOUT:
-                return (byte) 'o';
-            case MessageHeader.TRACE_ID:
-                return (byte) 'p';
-            default:
-                throw new Exception("不存在此key");
-        }
-    }
-
-    public static String byteToKey(byte b) throws Exception {
-        switch (b) {
-            case 'a':
-                return MessageHeader.TOPIC;
-            case 'b':
-                return MessageHeader.SEARCH_KEY;
-            case 'c':
-                return MessageHeader.BORN_HOST;
-            case 'd':
-                return MessageHeader.BORN_TIMESTAMP;
-            case 'e':
-                return MessageHeader.MESSAGE_ID;
-            case 'f':
-                return MessageHeader.PRIORITY;
-            case 'g':
-                return MessageHeader.RELIABILITY;
-            case 'h':
-                return MessageHeader.SCHEDULE_EXPRESSION;
-            case 'i':
-                return MessageHeader.SHARDING_KEY;
-            case 'j':
-                return MessageHeader.SHARDING_PARTITION;
-            case 'k':
-                return MessageHeader.START_TIME;
-            case 'l':
-                return MessageHeader.STOP_TIME;
-            case 'm':
-                return MessageHeader.STORE_HOST;
-            case 'n':
-                return MessageHeader.STORE_TIMESTAMP;
-            case 'o':
-                return MessageHeader.TIMEOUT;
-            case 'p':
-                return MessageHeader.TRACE_ID;
-            default:
-                throw new Exception("没有byte");
-        }
-
     }
 }
