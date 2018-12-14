@@ -196,7 +196,7 @@ public class DemoTester {
             pullers.get(i).join();
         }
         long time4 = System.currentTimeMillis();
-        System.out.println(String.format("pull 结束，time cost: %d，push count: %d", time4 - time3, pullCount.get()));
+        System.out.println(String.format("pull 结束，time cost: %d，pull count: %d", time4 - time3, pullCount.get()));
     }
 
     public static void main(String args[]) {
