@@ -321,6 +321,7 @@ public class DemoMessageStore {
         buf.position(0);
         buf.get(bytes);
         bytes = compress(bytes);
+        System.out.println("----------------");
         writeInt(bytes.length);
         output.write(bytes, 0, bytes.length);
         //output.flush();
