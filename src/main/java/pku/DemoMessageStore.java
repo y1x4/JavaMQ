@@ -6,8 +6,8 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.HashMap;
 import java.util.Set;
-import java.util.zip.Deflater;
-import java.util.zip.Inflater;
+import java.util.zip.DeflaterOutputStream;
+import java.util.zip.InflaterOutputStream;
 
 /**
  * 这是一个消息队列的内存实现
@@ -108,7 +108,7 @@ public class DemoMessageStore {
                 }
             }
 
-*/
+
 
             // write body's length, byte[]
             int bodyLen = msg.getBody().length;
@@ -122,8 +122,24 @@ public class DemoMessageStore {
                 out.writeByte(2);
                 out.writeInt(bodyLen);
             }
-
             out.write(msg.getBody());
+            */
+
+
+
+            byte[] body = msg.getBody();
+            if (body.length < 1024) {
+                out.writeByte(0);
+                out.writeInt(body.length);
+                out.write(body);
+            } else {
+                out.writeByte(1);
+                body = compress(body);
+                assert body != null;
+                out.writeInt(body.length);
+                out.write(body);
+            }
+
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -204,7 +220,7 @@ public class DemoMessageStore {
                     in.get(vals);
                     headers.put(MessageHeader.getHeader(index), new String(vals));
                 }
-            }*/
+            }
 
 
             // 读取 body 部分
@@ -218,6 +234,16 @@ public class DemoMessageStore {
                 body = new byte[in.getInt()];
             }
             in.get(body);
+
+            */
+
+
+            byte type = in.get();
+            byte[] body = new byte[in.getInt()];
+            in.get(body);
+            if (type == 1) {
+                body = decompress(body);
+            }
 
 
             // 组成消息并返回
@@ -339,66 +365,36 @@ public class DemoMessageStore {
 
 
 
-    public static byte[] compress(byte[] data) {
-        byte[] output = new byte[0];
-
-        Deflater compresser = new Deflater();
-        compresser.setLevel(1);
-        //compress.setStrategy(2);
-        compresser.reset();
-        compresser.setInput(data);
-        compresser.finish();
-        ByteArrayOutputStream bos = new ByteArrayOutputStream(data.length);
+    public static byte[] compress(byte[] in) {
         try {
-            byte[] buf = new byte[5 * 1024];
-            while (!compresser.finished()) {
-                int i = compresser.deflate(buf);
-                bos.write(buf, 0, i);
-            }
-            output = bos.toByteArray();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            DeflaterOutputStream defl = new DeflaterOutputStream(out);
+            defl.write(in);
+            defl.flush();
+            defl.close();
+
+            return out.toByteArray();
         } catch (Exception e) {
-            output = data;
             e.printStackTrace();
-        } finally {
-            try {
-                bos.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            System.exit(150);
+            return null;
         }
-        compresser.end();
-        return output;
     }
 
-
-    public static byte[] decompress(byte[] data) {
-        byte[] output = new byte[0];
-
-        Inflater decompresser = new Inflater();
-        decompresser.reset();
-        decompresser.setInput(data);
-
-        ByteArrayOutputStream o = new ByteArrayOutputStream(data.length);
+    public static byte[] decompress(byte[] in) {
         try {
-            byte[] buf = new byte[1024 * 5];
-            while (!decompresser.finished()) {
-                int i = decompresser.inflate(buf);
-                o.write(buf, 0, i);
-            }
-            output = o.toByteArray();
-        } catch (Exception e) {
-            output = data;
-            e.printStackTrace();
-        } finally {
-            try {
-                o.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            InflaterOutputStream infl = new InflaterOutputStream(out);
+            infl.write(in);
+            infl.flush();
+            infl.close();
 
-        decompresser.end();
-        return output;
+            return out.toByteArray();
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(150);
+            return null;
+        }
     }
 
 
