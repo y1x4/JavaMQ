@@ -113,14 +113,17 @@ public class DemoMessageStore {
 
             // write body's length, byte[]
             int bodyLen = msg.getBody().length;
-            if (bodyLen <= Byte.MAX_VALUE) {    // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
+            if (bodyLen <= Byte.MAX_VALUE) {
                 out.writeByte(0);
                 out.writeByte(bodyLen);
+            } else if (bodyLen <= Short.MAX_VALUE){
+                out.writeByte(1);  // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
+                out.writeShort(bodyLen);
             } else {
-                out.writeByte(1);
+                out.writeByte(2);
                 out.writeInt(bodyLen);
             }
-            out.write(compress(msg.getBody()));
+            out.write(msg.getBody());
 
 
         } catch (IOException e) {
@@ -210,6 +213,8 @@ public class DemoMessageStore {
             byte[] body;
             if (type == 0) {
                 body = new byte[in.get()];
+            } else if (type == 1) {
+                body = new byte[in.getShort()];
             } else {
                 body = new byte[in.getInt()];
             }
@@ -217,7 +222,7 @@ public class DemoMessageStore {
 
 
             // 组成消息并返回
-            ByteMessage msg = new DefaultMessage(decompress(body));
+            ByteMessage msg = new DefaultMessage(body);
             msg.setHeaders(headers);
             return msg;
 
@@ -294,7 +299,6 @@ public class DemoMessageStore {
             }
             buf.put(msg.getBody());
 
-            writeFile();
 
             // 如果 buffer 剩余空间不足，先写入此 buffer
             if (buf.remaining() <= 201 * 1024) {
@@ -307,18 +311,6 @@ public class DemoMessageStore {
             e.printStackTrace();
         }
     }
-
-    public void writeFile() throws Exception {
-        byte[] bytes = new byte[buf.position()];
-        buf.position(0);
-        buf.get(bytes);
-        // bytes = compress(bytes);
-        writeInt(bytes.length);
-        output.write(bytes, 0, bytes.length);
-        //output.flush();
-        buf.clear();
-    }
-
 
     public void write() throws Exception {
         if (buf.remaining() == BUFFER_CAPACITY) {
@@ -388,7 +380,7 @@ public class DemoMessageStore {
             for (String topic : topics) {
                 buf    = bufferMap.get(topic);
                 output = outputMap.get(topic);
-                // write();
+                write();
                 // writeInt(-1); 没有了返回 -1
                 output.flush();
                 //output.close();
