@@ -15,12 +15,16 @@ import java.util.zip.Inflater;
 public class DemoMessageStore {
 	static final DemoMessageStore store = new DemoMessageStore();
 
+    private static final String FILE_DIR = "./data/";
+
 	HashMap<String, DataOutputStream> outMap = new HashMap<>();
     HashMap<String, MappedByteBuffer> inMap  = new HashMap<>();
 
 
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
     MappedByteBuffer in;     // 按 queue + topic 读取 不同 topic 文件
+
+
 
     static final int BUFFER_CAPACITY = 4660 * 1024;
 
@@ -29,7 +33,6 @@ public class DemoMessageStore {
     ByteBuffer buf;
     OutputStream output;
 
-    private static final String FILE_DIR = "./data/";
 
 
 	// 加锁保证线程安全
@@ -172,9 +175,8 @@ public class DemoMessageStore {
             }
             for (int i = 11; i < 15; i++) {
                 if ((key >> i & 1) == 1) {
-                    byte vLen = in.get();    // valueLength
-                    byte[] vals = new byte[vLen];    // value
-                    in.get(vals);
+                    byte[] vals = new byte[in.get()];    // valueLength
+                    in.get(vals);   // value
                     headers.put(MessageHeader.getHeader(i), new String(vals));
                 }
             }

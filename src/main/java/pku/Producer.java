@@ -22,12 +22,12 @@ public class Producer {
     //将message发送出去
     public void send(ByteMessage msg) {
         String topic = msg.headers().getString(MessageHeader.TOPIC);
-        DemoMessageStore.store.push(msg, topic);
+        DemoMessageStore.store.bufferPush(msg, topic);
     }
 
     //处理将缓存区的剩余部分
     public void flush()throws Exception {
-        DemoMessageStore.store.flush(topics);
+        DemoMessageStore.store.bFlush(topics);
         System.out.println("flush");
     }
 }
