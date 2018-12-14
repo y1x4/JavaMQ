@@ -320,7 +320,7 @@ public class DemoMessageStore {
         byte[] bytes = new byte[buf.position()];
         buf.position(0);
         buf.get(bytes);
-        bytes = compress(bytes);
+        // bytes = compress(bytes);
         System.out.println("----------------");
         writeInt(bytes.length);
         output.write(bytes, 0, bytes.length);
