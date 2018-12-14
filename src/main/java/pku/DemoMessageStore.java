@@ -120,7 +120,7 @@ public class DemoMessageStore {
                 out.writeByte(1);
                 out.writeInt(bodyLen);
             }
-            out.write(msg.getBody());
+            out.write(compress(msg.getBody()));
 
 
         } catch (IOException e) {
@@ -217,7 +217,7 @@ public class DemoMessageStore {
 
 
             // 组成消息并返回
-            ByteMessage msg = new DefaultMessage(body);
+            ByteMessage msg = new DefaultMessage(decompress(body));
             msg.setHeaders(headers);
             return msg;
 
@@ -294,6 +294,7 @@ public class DemoMessageStore {
             }
             buf.put(msg.getBody());
 
+            writeFile();
 
             // 如果 buffer 剩余空间不足，先写入此 buffer
             if (buf.remaining() <= 201 * 1024) {
@@ -306,6 +307,18 @@ public class DemoMessageStore {
             e.printStackTrace();
         }
     }
+
+    public void writeFile() throws Exception {
+        byte[] bytes = new byte[buf.position()];
+        buf.position(0);
+        buf.get(bytes);
+        // bytes = compress(bytes);
+        writeInt(bytes.length);
+        output.write(bytes, 0, bytes.length);
+        //output.flush();
+        buf.clear();
+    }
+
 
     public void write() throws Exception {
         if (buf.remaining() == BUFFER_CAPACITY) {
@@ -375,7 +388,7 @@ public class DemoMessageStore {
             for (String topic : topics) {
                 buf    = bufferMap.get(topic);
                 output = outputMap.get(topic);
-                write();
+                // write();
                 // writeInt(-1); 没有了返回 -1
                 output.flush();
                 //output.close();
