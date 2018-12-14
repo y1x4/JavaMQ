@@ -41,13 +41,14 @@ public class DemoMessageStore {
 			return;
 
         try {
+
             // 获取写入流
             if (!outMap.containsKey(topic)) {
                 File file = new File("./data/" + topic);
                 if (file.exists()) file.delete();
 
                 outMap.put(topic, new DataOutputStream(new BufferedOutputStream(
-                        new FileOutputStream(FILE_DIR + topic,  true))));
+                        new FileOutputStream(FILE_DIR + topic, true))));
             }
             out = outMap.get(topic);
 
@@ -107,38 +108,19 @@ public class DemoMessageStore {
                     out.write(strVal.getBytes());
                 }
             }
-
+*/
 
 
             // write body's length, byte[]
             int bodyLen = msg.getBody().length;
-            if (bodyLen <= Byte.MAX_VALUE) {
+            if (bodyLen <= Byte.MAX_VALUE) {    // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
                 out.writeByte(0);
                 out.writeByte(bodyLen);
-            } else if (bodyLen <= Short.MAX_VALUE){
-                out.writeByte(1);  // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
-                out.writeShort(bodyLen);
             } else {
-                out.writeByte(2);
+                out.writeByte(1);
                 out.writeInt(bodyLen);
             }
             out.write(msg.getBody());
-            */
-
-
-
-            byte[] body = msg.getBody();
-            if (body.length < 1024) {
-                out.writeByte(0);
-                out.writeInt(body.length);
-                out.write(body);
-            } else {
-                out.writeByte(1);
-                body = compress(body);
-                assert body != null;
-                out.writeInt(body.length);
-                out.write(body);
-            }
 
 
         } catch (IOException e) {
@@ -221,29 +203,17 @@ public class DemoMessageStore {
                     headers.put(MessageHeader.getHeader(index), new String(vals));
                 }
             }
-
+ */
 
             // 读取 body 部分
             byte type = in.get();
             byte[] body;
             if (type == 0) {
                 body = new byte[in.get()];
-            } else if (type == 1) {
-                body = new byte[in.getShort()];
             } else {
                 body = new byte[in.getInt()];
             }
             in.get(body);
-
-            */
-
-
-            byte type = in.get();
-            byte[] body = new byte[in.getInt()];
-            in.get(body);
-            if (type == 1) {
-                body = decompress(body);
-            }
 
 
             // 组成消息并返回
