@@ -110,32 +110,20 @@ public class DemoMessageStore {
             }
 
 
-            if (bodyLen <= Byte.MAX_VALUE) {
-                out.writeByte(0);
-                out.writeByte(bodyLen);
-            } else if (bodyLen <= Short.MAX_VALUE){
-                out.writeByte(1);  // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
-                out.writeShort(bodyLen);
-            } else {
-                out.writeByte(2);
-                out.writeInt(bodyLen);
-            }
+
 */
 
 
             // write body's length, byte[]
             int bodyLen = msg.getBody().length;
-
-            if (bodyLen >= 1024) {
-                byte[] compressedBody = compress(msg.getBody());
-                out.writeByte(1);
-                out.writeInt(compressedBody.length);
-                out.write(compressedBody);
-            } else {
+            if (bodyLen <= Byte.MAX_VALUE) {// body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
                 out.writeByte(0);
+                out.writeByte(bodyLen);
+            } else {
+                out.writeByte(1);
                 out.writeInt(bodyLen);
-                out.write(msg.getBody());
             }
+            out.write(msg.getBody());
 
 
 
@@ -222,22 +210,19 @@ public class DemoMessageStore {
             }
 
 
-            if (type == 0) {
-                body = new byte[in.get()];
-            } else if (type == 1) {
-                body = new byte[in.getShort()];
-            } else {
-                body = new byte[in.getInt()];
-            }
  */
 
             // 读取 body 部分
             byte type = in.get();
-            byte[] body = new byte[in.getInt()];
-            in.get(body);
-            if (type == 1) {
-                body = decompress(body);
+            byte[] body;
+            if (type == 0) {
+                body = new byte[in.get()];
+            } else {
+                body = new byte[in.getInt()];
             }
+            in.get(body);
+
+
 
             // 组成消息并返回
             ByteMessage msg = new DefaultMessage(body);
