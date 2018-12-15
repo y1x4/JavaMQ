@@ -57,6 +57,171 @@ public class DemoMessageStore {
             KeyValue headers = msg.headers();
             short key = 0;
 
+
+            String v14, v13, v12, v11, v10;
+
+            v14 = headers.getString(MessageHeader.TRACE_ID);
+            if (v14 != null)
+                key = (short) (key | 1);
+
+            key <<= 1;
+            v13 = headers.getString(MessageHeader.SCHEDULE_EXPRESSION);
+            if (v13 != null)
+                key = (short) (key | 1);
+
+            key <<= 1;
+            v12 = headers.getString(MessageHeader.SEARCH_KEY);
+            if (v12 != null)
+                key = (short) (key | 1);
+
+            key <<= 1;
+            v11 = headers.getString(MessageHeader.STORE_HOST);
+            if (v11 != null)
+                key = (short) (key | 1);
+
+            key <<= 1;
+            v10 = headers.getString(MessageHeader.BORN_HOST);
+            if (v10 != null)
+                key = (short) (key | 1);
+
+
+            double v9, v8;
+
+            key <<= 1;
+            v9 = headers.getDouble(MessageHeader.SHARDING_PARTITION);
+            if (v9 != 0.0d)
+                key = (short) (key | 1);
+
+            key <<= 1;
+            v8 = headers.getDouble(MessageHeader.SHARDING_KEY);
+            if (v8 != 0.0d)
+                key = (short) (key | 1);
+
+
+            long v7, v6, v5, v4;
+
+            key <<= 1;
+            v7 = headers.getLong(MessageHeader.STOP_TIME);
+            if (v7 != 0L)
+                key = (short) (key | 1);
+
+            key <<= 1;
+            v6 = headers.getLong(MessageHeader.START_TIME);
+            if (v6 != 0L)
+                key = (short) (key | 1);
+
+            key <<= 1;
+            v5 = headers.getLong(MessageHeader.STORE_TIMESTAMP);
+            if (v5 != 0L)
+                key = (short) (key | 1);
+
+            key <<= 1;
+            v4 = headers.getLong(MessageHeader.BORN_TIMESTAMP);
+            if (v4 != 0L)
+                key = (short) (key | 1);
+
+
+            int v3, v2, v1, v0;
+
+            key <<= 1;
+            v3 = headers.getInt(MessageHeader.RELIABILITY);
+            if (v3 != 0L)
+                key = (short) (key | 1);
+
+            key <<= 1;
+            v2 = headers.getInt(MessageHeader.PRIORITY);
+            if (v2 != 0L)
+                key = (short) (key | 1);
+
+            key <<= 1;
+            v1 = headers.getInt(MessageHeader.TIMEOUT);
+            if (v1 != 0L)
+                key = (short) (key | 1);
+
+            key <<= 1;
+            v0 = headers.getInt(MessageHeader.MESSAGE_ID);
+            if (v0 != 0L)
+                key = (short) (key | 1);
+
+
+
+            out.writeShort(key);
+
+
+            if ((key & 1) == 1) out.writeInt(v0);
+            key >>= 1;
+            if ((key & 1) == 1) out.writeInt(v1);
+            key >>= 1;
+            if ((key & 1) == 1) out.writeInt(v2);
+            key >>= 1;
+            if ((key & 1) == 1) out.writeInt(v3);
+            key >>= 1;
+
+            if ((key & 1) == 1) out.writeLong(v4);
+            key >>= 1;
+            if ((key & 1) == 1) out.writeLong(v5);
+            key >>= 1;
+            if ((key & 1) == 1) out.writeLong(v6);
+            key >>= 1;
+            if ((key & 1) == 1) out.writeLong(v7);
+            key >>= 1;
+
+            if ((key & 1) == 1) out.writeDouble(v8);
+            key >>= 1;
+            if ((key & 1) == 1) out.writeDouble(v9);
+            key >>= 1;
+
+            if ((key & 1) == 1) {
+                out.writeByte(v10.length());
+                out.write(v10.getBytes());
+            }
+            key >>= 1;
+            if ((key & 1) == 1) {
+                out.writeByte(v11.length());
+                out.write(v11.getBytes());
+            }
+            key >>= 1;
+            if ((key & 1) == 1) {
+                out.writeByte(v12.length());
+                out.write(v12.getBytes());
+            }
+            key >>= 1;
+            if ((key & 1) == 1) {
+                out.writeByte(v13.length());
+                out.write(v13.getBytes());
+            }
+            key >>= 1;
+            if ((key & 1) == 1) {
+                out.writeByte(v14.length());
+                out.write(v14.getBytes());
+            }
+
+/*
+            for (int i = 0; i < 15; i++) {
+                if ((key & 1) == 1) {
+                    if (i < 4)
+                        headers.put(MessageHeader.getHeader(i), in.getInt());
+                    else if (i < 8)
+                        headers.put(MessageHeader.getHeader(i), in.getLong());
+                    else if (i < 10)
+                        headers.put(MessageHeader.getHeader(i), in.getDouble());
+                    else {
+                        byte[] vals = new byte[in.get()];    // valueLength
+                        in.get(vals);   // value
+                        headers.put(MessageHeader.getHeader(i), new String(vals));
+                    }
+
+                }
+                key >>= 1;
+            }
+
+
+            for (int i = 14; i >= 0; i--) {
+                key <<= 1;
+                if (headers.containsKey(MessageHeader.getHeader(i)))
+                    key = (short) (key | 1);
+            }
+
             for (int i = 0; i < 15; i++) {
                 key = (short) (key << 1);
                 if (headers.containsKey(MessageHeader.getHeader(14 - i)))
@@ -82,7 +247,7 @@ public class DemoMessageStore {
                     out.write(strVal.getBytes());
                 }
             }
-        /*
+
 
             // write headers —— size, key index, valueLength, valueBytes
             out.writeByte(msg.headers().getMap().size());
@@ -181,77 +346,6 @@ public class DemoMessageStore {
                 key >>= 1;
             }
 
-            /*
-            int i;
-            for (i = 0; i < 4; i++) {
-                if ((key & 1) == 1)
-                    headers.put(MessageHeader.getHeader(i), in.getInt());
-                key >>= 1;
-            }
-            for ( ; i < 8; i++) {
-                if ((key & 1) == 1)
-                    headers.put(MessageHeader.getHeader(i), in.getLong());
-                key >>= 1;
-            }
-            for ( ; i < 10; i++) {
-                if ((key & 1) == 1)
-                    headers.put(MessageHeader.getHeader(i), in.getDouble());
-                key >>= 1;
-            }
-            for ( ; i < 14; i++) {
-                if ((key & 1) == 1){
-                    byte[] vals = new byte[in.get()];    // valueLength
-                    in.get(vals);   // value
-                    headers.put(MessageHeader.getHeader(i), new String(vals));
-                }
-                key >>= 1;
-            }
-
-
-
-            for (int i = 4; i < 8; i++) {
-                if ((key >> i & 1) == 1)
-                    headers.put(MessageHeader.getHeader(i), in.getLong());
-            }
-            for (int i = 8; i < 10; i++) {
-                if ((key >> i & 1) == 1)
-                    headers.put(MessageHeader.getHeader(i), in.getDouble());
-            }
-            for (int i = 11; i < 15; i++) {
-                if ((key >> i & 1) == 1) {
-                    byte[] vals = new byte[in.get()];    // valueLength
-                    in.get(vals);   // value
-                    headers.put(MessageHeader.getHeader(i), new String(vals));
-                }
-            }
-
-
-
-
-            // 读取 headers 部分
-            KeyValue headers = new DefaultKeyValue();
-            headers.put(MessageHeader.TOPIC, topic);    // 直接写入 topic
-            int headerSize = in.get();
-            for (int i = 1; i < headerSize; i++) {  // 少了一轮 topic
-                int index = in.get();
-
-                // 0-3 int, 4-7 long, 8-9 double, 10-15 string
-                if (index <= 3) {
-                    headers.put(MessageHeader.getHeader(index), in.getInt());
-                } else if (index <= 7) {
-                    headers.put(MessageHeader.getHeader(index), in.getLong());
-                } else if (index <= 9) {
-                    headers.put(MessageHeader.getHeader(index), in.getDouble());
-                } else {
-                    byte vLen = in.get();    // valueLength
-                    byte[] vals = new byte[vLen];    // value
-                    in.get(vals);
-                    headers.put(MessageHeader.getHeader(index), new String(vals));
-                }
-            }
-
-
- */
 
             // 读取 body 部分
             byte type = in.get();
@@ -264,11 +358,11 @@ public class DemoMessageStore {
             in.get(body);
 
 
-
             // 组成消息并返回
             ByteMessage msg = new DefaultMessage(body);
             msg.setHeaders(headers);
             return msg;
+
 
         } catch (IOException e) {
             e.printStackTrace();
