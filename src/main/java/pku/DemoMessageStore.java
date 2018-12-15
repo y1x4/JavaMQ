@@ -56,6 +56,7 @@ public class DemoMessageStore {
             // use short to record header keys, except TOPIC
             KeyValue headers = msg.headers();
             short key = 0;
+
             for (int i = 0; i < 15; i++) {
                 key = (short) (key << 1);
                 if (headers.containsKey(MessageHeader.getHeader(14 - i)))
@@ -81,7 +82,7 @@ public class DemoMessageStore {
                     out.write(strVal.getBytes());
                 }
             }
-/*
+        /*
 
             // write headers —— size, key index, valueLength, valueBytes
             out.writeByte(msg.headers().getMap().size());
@@ -108,15 +109,12 @@ public class DemoMessageStore {
                     out.write(strVal.getBytes());
                 }
             }
-
-
-
-*/
+        */
 
 
             // write body's length, byte[]
             int bodyLen = msg.getBody().length;
-            if (bodyLen <= Byte.MAX_VALUE) {// body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
+            if (bodyLen <= Byte.MAX_VALUE) {    // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
                 out.writeByte(0);
                 out.writeByte(bodyLen);
             } else {
@@ -164,10 +162,49 @@ public class DemoMessageStore {
             KeyValue headers = new DefaultKeyValue();
             headers.put(MessageHeader.TOPIC, topic);    // 直接写入 topic
             short key = in.getShort();
-            for (int i = 0; i < 4; i++) {
-                if ((key >> i & 1) == 1)
+            int i;
+            for (i = 0; i < 4; i++) {
+                if ((key & 1) == 1)
                     headers.put(MessageHeader.getHeader(i), in.getInt());
+                key >>= 1;
             }
+            for ( ; i < 8; i++) {
+                if ((key & 1) == 1)
+                    headers.put(MessageHeader.getHeader(i), in.getLong());
+                key >>= 1;
+            }
+            for ( ; i < 10; i++) {
+                if ((key & 1) == 1)
+                    headers.put(MessageHeader.getHeader(i), in.getDouble());
+                key >>= 1;
+            }
+            for ( ; i < 14; i++) {
+                if ((key & 1) == 1){
+                    byte[] vals = new byte[in.get()];    // valueLength
+                    in.get(vals);   // value
+                    headers.put(MessageHeader.getHeader(i), new String(vals));
+                }
+                key >>= 1;
+            }
+              /*
+            for (int i = 14; i >= 0; i--) {
+                if ((key & 1) == 1) {
+                    if (i < 4)
+                        headers.put(MessageHeader.getHeader(i), in.getInt());
+                    else if (i < 8)
+                        headers.put(MessageHeader.getHeader(i), in.getLong());
+                    else if (i < 10)
+                        headers.put(MessageHeader.getHeader(i), in.getDouble());
+                    else {
+                        byte[] vals = new byte[in.get()];    // valueLength
+                        in.get(vals);   // value
+                        headers.put(MessageHeader.getHeader(i), new String(vals));
+                    }
+
+                }
+                key >>= 1;
+            }
+
             for (int i = 4; i < 8; i++) {
                 if ((key >> i & 1) == 1)
                     headers.put(MessageHeader.getHeader(i), in.getLong());
@@ -185,7 +222,7 @@ public class DemoMessageStore {
             }
 
 
-            /*
+
 
             // 读取 headers 部分
             KeyValue headers = new DefaultKeyValue();
