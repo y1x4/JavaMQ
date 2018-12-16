@@ -304,7 +304,7 @@ public class DemoMessageStore {
 
 
     // 加锁保证线程安全
-    public ByteMessage pull(String queue, String topic) {
+    public synchronized ByteMessage pull(String queue, String topic) {
         try {
 
             String inKey = queue + topic;
