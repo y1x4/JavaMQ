@@ -52,7 +52,7 @@ public class DemoMessageStore {
                 if (file.exists()) file.delete();
 
                 outMap.put(topic, new DataOutputStream(new BufferedOutputStream(
-                        new FileOutputStream(FILE_DIR + topic, true))));
+                        new FileOutputStream(FILE_DIR + topic, true), 32768)));
             }
             out = outMap.get(topic);
 
@@ -60,14 +60,15 @@ public class DemoMessageStore {
             // use short to record header keys, except TOPIC
             KeyValue headers = msg.headers();
 
-            for (int i = 0; i < 4; i++)
+            int i = 0;
+            for ( ; i < 4; i++)
                 out.writeInt(headers.getInt(MessageHeader.getHeader(i)));
-            for (int i = 4; i < 8; i++)
+            for ( ; i < 8; i++)
                 out.writeLong(headers.getLong(MessageHeader.getHeader(i)));
-            for (int i = 8; i < 10; i++)
+            for ( ; i < 10; i++)
                 out.writeDouble(headers.getDouble(MessageHeader.getHeader(i)));
             String strVal;
-            for (int i = 11; i < 15; i++) {
+            for ( ; i < 15; i++) {
                 strVal = headers.getString(MessageHeader.getHeader(i));
                 if (strVal == null)
                     out.writeByte(0);
@@ -336,12 +337,8 @@ public class DemoMessageStore {
                 out.writeByte(0);
                 out.writeByte(bodyLen);
                 cnt[0]++;
-            } else if (bodyLen <= Short.MAX_VALUE) {
-                out.writeByte(1);
-                out.writeShort(bodyLen);
-                cnt[1]++;
             } else {
-                out.writeByte(2);
+                out.writeByte(1);
                 out.writeInt(bodyLen);
                 cnt[2]++;
             }
@@ -407,13 +404,14 @@ public class DemoMessageStore {
                 key >>= 1;
             }*/
 
-            for (int i = 0; i < 4; i++)
+            int i = 0;
+            for ( ; i < 4; i++)
                 headers.put(MessageHeader.getHeader(i), in.getInt());
-            for (int i = 4; i < 8; i++)
+            for ( ; i < 8; i++)
                 headers.put(MessageHeader.getHeader(i), in.getLong());
-            for (int i = 8; i < 10; i++)
+            for ( ; i < 10; i++)
                 headers.put(MessageHeader.getHeader(i), in.getDouble());
-            for (int i = 11; i < 15; i++) {
+            for ( ; i < 15; i++) {
                 byte len = in.get();
                 if (len > 0) {
                     byte[] vals = new byte[len];
@@ -429,8 +427,6 @@ public class DemoMessageStore {
             byte[] body;
             if (type == 0) {
                 body = new byte[in.get()];
-            } else if (type == 1) {
-                body = new byte[in.getShort()];
             } else {
                 body = new byte[in.getInt()];
             }
