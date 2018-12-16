@@ -7,13 +7,12 @@ import java.util.*;
  */
 
 public class Consumer {
-    List<String> topics = new ArrayList<>();
+    final List<String> topics = new ArrayList<>();
     int readPos = 0;
     String queue;
     int index = 0;
 
-    // Map<String, DemoMessageStore> storeMap = new HashMap<>();
-    DemoMessageStore store = new DemoMessageStore();
+    final DemoMessageStore store = new DemoMessageStore();
 
     private BufferService bufferService = BufferService.getInstance("./data/");
     private ArrayList<MessageReader> readers = new ArrayList<>();
@@ -72,7 +71,6 @@ public class Consumer {
         return message;
         */
 
-        // store = storeMap.computeIfAbsent(queue, k -> new DemoMessageStore());
 
 
         // 依次读取 topic 所有内容

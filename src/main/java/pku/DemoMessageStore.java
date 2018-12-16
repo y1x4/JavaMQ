@@ -21,16 +21,13 @@ public class DemoMessageStore {
 	HashMap<String, DataOutputStream> outMap = new HashMap<>();
     HashMap<String, MappedByteBuffer> inMap  = new HashMap<>();
 
-    static int[] cnt = new int[17];
-    static int[] strnt = new int[127];
-
-
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
     MappedByteBuffer in;     // 按 queue + topic 读取 不同 topic 文件
 
 
     HashMap<byte[], String> strMap  = new HashMap<>();
 
+    static int[] cnt = new int[3];
 
 
     static final int BUFFER_CAPACITY = 4660 * 1024;
@@ -62,12 +59,28 @@ public class DemoMessageStore {
 
             // use short to record header keys, except TOPIC
             KeyValue headers = msg.headers();
-            short key = 0;
+
+            for (int i = 0; i < 4; i++)
+                out.writeInt(headers.getInt(MessageHeader.getHeader(i)));
+            for (int i = 4; i < 8; i++)
+                out.writeLong(headers.getLong(MessageHeader.getHeader(i)));
+            for (int i = 8; i < 10; i++)
+                out.writeDouble(headers.getDouble(MessageHeader.getHeader(i)));
+            String strVal;
+            for (int i = 11; i < 15; i++) {
+                strVal = headers.getString(MessageHeader.getHeader(i));
+                if (strVal == null)
+                    out.writeByte(0);
+                else {
+                    out.writeByte(strVal.getBytes().length);
+                    out.write(strVal.getBytes());
+                }
+            }
 
 
-            cnt[headers.getMap().size()]++;
 
 
+            /*
             String v14, v13, v12, v11, v10;
 
             v14 = headers.getString(MessageHeader.TRACE_ID);
@@ -210,7 +223,7 @@ public class DemoMessageStore {
                 out.writeByte(v14.length());
                 out.write(v14.getBytes());
             }
-            /*
+
             for (int i = 14; i >= 0; i--) {
                 key <<= 1;
                 if (headers.containsKey(MessageHeader.getHeader(i)))
@@ -322,12 +335,15 @@ public class DemoMessageStore {
             if (bodyLen <= Byte.MAX_VALUE) {    // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
                 out.writeByte(0);
                 out.writeByte(bodyLen);
+                cnt[0]++;
             } else if (bodyLen <= Short.MAX_VALUE) {
                 out.writeByte(1);
                 out.writeShort(bodyLen);
+                cnt[1]++;
             } else {
                 out.writeByte(2);
                 out.writeInt(bodyLen);
+                cnt[2]++;
             }
             out.write(msg.getBody());
 
@@ -369,6 +385,8 @@ public class DemoMessageStore {
             // 读取 headers 部分
             KeyValue headers = new DefaultKeyValue();
             headers.put(MessageHeader.TOPIC, topic);    // 直接写入 topic
+
+            /*
             short key = in.getShort();
 
             for (int i = 0; i < 15; i++) {
@@ -387,7 +405,23 @@ public class DemoMessageStore {
 
                 }
                 key >>= 1;
+            }*/
+
+            for (int i = 0; i < 4; i++)
+                headers.put(MessageHeader.getHeader(i), in.getInt());
+            for (int i = 4; i < 8; i++)
+                headers.put(MessageHeader.getHeader(i), in.getLong());
+            for (int i = 8; i < 10; i++)
+                headers.put(MessageHeader.getHeader(i), in.getDouble());
+            for (int i = 11; i < 15; i++) {
+                byte len = in.get();
+                if (len > 0) {
+                    byte[] vals = new byte[len];
+                    in.get(vals);   // value
+                    headers.put(MessageHeader.getHeader(i), new String(vals));
+                }
             }
+
 
 
             // 读取 body 部分
@@ -588,7 +622,6 @@ public class DemoMessageStore {
                 out.flush();
             }
             System.out.println(Arrays.toString(cnt));
-            System.out.println(Arrays.toString(strnt));
         } catch (IOException e) {
             e.printStackTrace();
         }
