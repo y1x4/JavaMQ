@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class DemoTester {
     // 每个pusher向每个topic发送的消息数目
-    static int PUSH_COUNT = 100000;
+    static int PUSH_COUNT = 100;
     // 发送消息的线程数
     static int PUSH_THREAD_COUNT = 4;
     // 发送线程往n个topic发消息
@@ -55,6 +55,7 @@ public class DemoTester {
                         // topic加j作为数据部分
                         // j是序号, 在consumer中会用来校验顺序
                         byte[] data = (topic + " "+id + " " + j).getBytes();
+                        System.out.println(topic + " "+id + " " + j);
                         ByteMessage msg = producer.createBytesMessageToTopic(topics.get(i), data);
                         // 设置4个不同的header
                         msg.putHeaders(MessageHeader.MESSAGE_ID, 0);

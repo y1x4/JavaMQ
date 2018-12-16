@@ -80,7 +80,7 @@ public class DemoMessageStore {
                     }
 
                 }
-                key >>= 1;
+                key >>>= 1;
             }
 
 
@@ -112,10 +112,11 @@ public class DemoMessageStore {
             // String inKey = queue + topic;
             // in = inMap.get(inKey);
             if (in == null) {   // 不含则新建 buffer
+
+                //判断topic文件是否存在，不存在的话返回null，否则建立内存映射
                 File file = new File(FILE_DIR + topic );
-                if (!file.exists()) {       //判断topic文件是否存在，不存在的话返回null，否则建立内存映射
+                if (!file.exists())
                     return null;
-                }
 
                 FileChannel fc = new RandomAccessFile(file, "r").getChannel();
                 in = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
@@ -136,7 +137,6 @@ public class DemoMessageStore {
             KeyValue headers = new DefaultKeyValue();
             headers.put(MessageHeader.TOPIC, topic);    // 直接写入 topic
 
-
             short key = in.getShort();
 
             for (int i = 0; i < 15; i++) {
@@ -154,7 +154,7 @@ public class DemoMessageStore {
                     }
 
                 }
-                key >>= 1;
+                key >>>= 1;
             }
 
 
