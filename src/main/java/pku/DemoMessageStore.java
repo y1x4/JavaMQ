@@ -198,8 +198,33 @@ public class DemoMessageStore {
                 out.writeByte(v14.length());
                 out.write(v14.getBytes());
             }
+            /*
+            for (int i = 14; i >= 0; i--) {
+                key <<= 1;
+                if (headers.containsKey(MessageHeader.getHeader(i)))
+                    key = (short) (key | 1);
+            }
 
-/*
+            for (int i = 0; i < 15; i++) {
+                if ((key & 1) == 1) {
+                    if (i < 4)
+                        out.writeInt(headers.getInt(MessageHeader.getHeader(i)));
+                    else if (i < 8)
+                        out.writeLong(headers.getLong(MessageHeader.getHeader(i)));
+                    else if (i < 10)
+                        out.writeDouble(headers.getDouble(MessageHeader.getHeader(i)));
+                    else {
+                        String strVal = headers.getString(MessageHeader.getHeader(i));
+                        out.writeByte(strVal.getBytes().length);
+                        out.write(strVal.getBytes());
+                    }
+
+                }
+                key >>= 1;
+            }
+
+
+
             for (int i = 0; i < 15; i++) {
                 if ((key & 1) == 1) {
                     if (i < 4)
@@ -304,7 +329,7 @@ public class DemoMessageStore {
 
 
     // 加锁保证线程安全
-    public synchronized ByteMessage pull(String queue, String topic) {
+    public ByteMessage pull(String queue, String topic) {
         try {
 
             String inKey = queue + topic;
