@@ -4,6 +4,7 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.zip.DeflaterOutputStream;
@@ -18,13 +19,15 @@ public class DemoMessageStore {
     private static final String FILE_DIR = "./data/";
 
 	HashMap<String, DataOutputStream> outMap = new HashMap<>();
-    // HashMap<String, MappedByteBuffer> inMap  = new HashMap<>();
+    HashMap<String, MappedByteBuffer> inMap  = new HashMap<>();
 
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
     MappedByteBuffer in;     // 按 queue + topic 读取 不同 topic 文件
 
 
     HashMap<byte[], String> strMap  = new HashMap<>();
+
+    static int[] cnt = new int[3];
 
 
     static final int BUFFER_CAPACITY = 4660 * 1024;
@@ -80,7 +83,7 @@ public class DemoMessageStore {
                     }
 
                 }
-                key >>>= 1;
+                key >>= 1;
             }
 
 
@@ -89,9 +92,11 @@ public class DemoMessageStore {
             if (bodyLen <= Byte.MAX_VALUE) {    // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
                 out.writeByte(0);
                 out.writeByte(bodyLen);
+                cnt[0]++;
             } else {
                 out.writeByte(1);
                 out.writeInt(bodyLen);
+                cnt[2]++;
             }
             out.write(msg.getBody());
 
@@ -112,11 +117,10 @@ public class DemoMessageStore {
             // String inKey = queue + topic;
             // in = inMap.get(inKey);
             if (in == null) {   // 不含则新建 buffer
-
-                //判断topic文件是否存在，不存在的话返回null，否则建立内存映射
                 File file = new File(FILE_DIR + topic );
-                if (!file.exists())
+                if (!file.exists()) {       //判断topic文件是否存在，不存在的话返回null，否则建立内存映射
                     return null;
+                }
 
                 FileChannel fc = new RandomAccessFile(file, "r").getChannel();
                 in = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
@@ -137,6 +141,7 @@ public class DemoMessageStore {
             KeyValue headers = new DefaultKeyValue();
             headers.put(MessageHeader.TOPIC, topic);    // 直接写入 topic
 
+
             short key = in.getShort();
 
             for (int i = 0; i < 15; i++) {
@@ -154,7 +159,7 @@ public class DemoMessageStore {
                     }
 
                 }
-                key >>>= 1;
+                key >>= 1;
             }
 
 
@@ -585,6 +590,7 @@ public class DemoMessageStore {
                 out = outMap.get(topic);
                 out.flush();
             }
+            System.out.println(Arrays.toString(cnt));
         } catch (IOException e) {
             e.printStackTrace();
         }
