@@ -4,6 +4,7 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.zip.DeflaterOutputStream;
@@ -19,6 +20,8 @@ public class DemoMessageStore {
 
 	HashMap<String, DataOutputStream> outMap = new HashMap<>();
     HashMap<String, MappedByteBuffer> inMap  = new HashMap<>();
+
+    static int[] cnt = new int[17];
 
 
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
@@ -59,6 +62,9 @@ public class DemoMessageStore {
             // use short to record header keys, except TOPIC
             KeyValue headers = msg.headers();
             short key = 0;
+
+
+            cnt[headers.getMap().size()]++;
 
 
             String v14, v13, v12, v11, v10;
@@ -575,6 +581,7 @@ public class DemoMessageStore {
                 out = outMap.get(topic);
                 out.flush();
             }
+            System.out.println(Arrays.toString(cnt));
         } catch (IOException e) {
             e.printStackTrace();
         }
