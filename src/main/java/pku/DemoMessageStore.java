@@ -38,7 +38,7 @@ public class DemoMessageStore {
 
 
 	// 加锁保证线程安全
-	public synchronized void push(ByteMessage msg, String topic) {
+	public void push(ByteMessage msg, String topic) {
 		if (msg == null)
 			return;
 

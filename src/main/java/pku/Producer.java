@@ -18,7 +18,7 @@ public class Producer {
     }
 
     //将message发送出去
-    public  void send(ByteMessage msg) {
+    public synchronized void send(ByteMessage msg) {
         String topic = msg.headers().getString(MessageHeader.TOPIC);
         store.push(msg, topic);
     }
