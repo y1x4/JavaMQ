@@ -4,7 +4,6 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.zip.DeflaterOutputStream;
@@ -14,20 +13,19 @@ import java.util.zip.InflaterOutputStream;
  * 这是一个消息队列的内存实现
  */
 public class DemoMessageStore {
-	static final DemoMessageStore store = new DemoMessageStore();
+	// static final DemoMessageStore store = new DemoMessageStore();
 
     private static final String FILE_DIR = "./data/";
 
-	HashMap<String, DataOutputStream> outMap = new HashMap<>();
-    HashMap<String, MappedByteBuffer> inMap  = new HashMap<>();
+	// static final HashMap<String, DataOutputStream> outMap = new HashMap<>();
+    // static final HashMap<String, MappedByteBuffer> inMap  = new HashMap<>();
 
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
     MappedByteBuffer in;     // 按 queue + topic 读取 不同 topic 文件
 
+    String currTopic;
 
     HashMap<byte[], String> strMap  = new HashMap<>();
-
-    static int[] cnt = new int[3];
 
 
     static final int BUFFER_CAPACITY = 4660 * 1024;
@@ -47,14 +45,17 @@ public class DemoMessageStore {
         try {
 
             // 获取写入流
-            if (!outMap.containsKey(topic)) {
-                File file = new File("./data/" + topic);
-                if (file.exists()) file.delete();
+            if (out == null || !topic.equals(currTopic)) {
+                File file = new File(FILE_DIR + topic);
+                // if (file.exists()) file.delete();
 
-                outMap.put(topic, new DataOutputStream(new BufferedOutputStream(
-                        new FileOutputStream(FILE_DIR + topic, true), 32768)));
+                if (out != null) out.flush();
+                out = new DataOutputStream(new BufferedOutputStream(
+                        new FileOutputStream(file, true), 32768));
+                currTopic = topic;
+                // outMap.put(topic, out);
             }
-            out = outMap.get(topic);
+            // out = outMap.get(topic);
 
 
             // use short to record header keys, except TOPIC
@@ -92,11 +93,9 @@ public class DemoMessageStore {
             if (bodyLen <= Byte.MAX_VALUE) {    // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
                 out.writeByte(0);
                 out.writeByte(bodyLen);
-                cnt[0]++;
             } else {
                 out.writeByte(1);
                 out.writeInt(bodyLen);
-                cnt[2]++;
             }
             out.write(msg.getBody());
 
@@ -424,7 +423,7 @@ public class DemoMessageStore {
 
 
 
-
+/*
 
 
     // 加锁保证线程安全
@@ -529,7 +528,7 @@ public class DemoMessageStore {
         output.write(b, 0, 4);
     }
 
-
+*/
 
     public static byte[] compress(byte[] in) {
         try {
@@ -571,7 +570,7 @@ public class DemoMessageStore {
             for (String topic : topics) {
                 buf    = bufferMap.get(topic);
                 output = outputMap.get(topic);
-                write();
+                //write();
                 // writeInt(-1); 没有了返回 -1
                 output.flush();
                 //output.close();
@@ -583,14 +582,14 @@ public class DemoMessageStore {
 
 
     // flush
-	public void flush(Set<String> topics) {
-        DataOutputStream out;
+	public void flush() {
+        //DataOutputStream out;
         try {
-            for (String topic : topics) {
-                out = outMap.get(topic);
+            //for (String topic : topics) {
+            //    out = outMap.get(topic);
                 out.flush();
-            }
-            System.out.println(Arrays.toString(cnt));
+            //}
+            //System.out.println(Arrays.toString(cnt));
         } catch (IOException e) {
             e.printStackTrace();
         }
