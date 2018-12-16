@@ -4,7 +4,6 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.zip.DeflaterOutputStream;
@@ -19,15 +18,13 @@ public class DemoMessageStore {
     private static final String FILE_DIR = "./data/";
 
 	HashMap<String, DataOutputStream> outMap = new HashMap<>();
-    HashMap<String, MappedByteBuffer> inMap  = new HashMap<>();
+    // HashMap<String, MappedByteBuffer> inMap  = new HashMap<>();
 
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
     MappedByteBuffer in;     // 按 queue + topic 读取 不同 topic 文件
 
 
     HashMap<byte[], String> strMap  = new HashMap<>();
-
-    static int[] cnt = new int[3];
 
 
     static final int BUFFER_CAPACITY = 4660 * 1024;
@@ -59,26 +56,135 @@ public class DemoMessageStore {
 
             // use short to record header keys, except TOPIC
             KeyValue headers = msg.headers();
+            short key = 0;
 
-            int i = 0;
-            for ( ; i < 4; i++)
-                out.writeInt(headers.getInt(MessageHeader.getHeader(i)));
-            for ( ; i < 8; i++)
-                out.writeLong(headers.getLong(MessageHeader.getHeader(i)));
-            for ( ; i < 10; i++)
-                out.writeDouble(headers.getDouble(MessageHeader.getHeader(i)));
-            String strVal;
-            for ( ; i < 15; i++) {
-                strVal = headers.getString(MessageHeader.getHeader(i));
-                if (strVal == null)
-                    out.writeByte(0);
-                else {
-                    out.writeByte(strVal.getBytes().length);
-                    out.write(strVal.getBytes());
+            for (int i = 14; i >= 0; i--) {
+                key <<= 1;
+                if (headers.containsKey(MessageHeader.getHeader(i)))
+                    key = (short) (key | 1);
+            }
+            out.writeShort(key);
+
+            for (int i = 0; i < 15; i++) {
+                if ((key & 1) == 1) {
+                    if (i < 4)
+                        out.writeInt(headers.getInt(MessageHeader.getHeader(i)));
+                    else if (i < 8)
+                        out.writeLong(headers.getLong(MessageHeader.getHeader(i)));
+                    else if (i < 10)
+                        out.writeDouble(headers.getDouble(MessageHeader.getHeader(i)));
+                    else {
+                        String strVal = headers.getString(MessageHeader.getHeader(i));
+                        out.writeByte(strVal.getBytes().length);
+                        out.write(strVal.getBytes());
+                    }
+
                 }
+                key >>= 1;
             }
 
 
+            // write body's length, byte[]
+            int bodyLen = msg.getBody().length;
+            if (bodyLen <= Byte.MAX_VALUE) {    // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
+                out.writeByte(0);
+                out.writeByte(bodyLen);
+            } else {
+                out.writeByte(1);
+                out.writeInt(bodyLen);
+            }
+            out.write(msg.getBody());
+
+
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
+    // 加锁保证线程安全
+    public ByteMessage pull(String queue, String topic) {
+        try {
+
+            // String inKey = queue + topic;
+            // in = inMap.get(inKey);
+            if (in == null) {   // 不含则新建 buffer
+                File file = new File(FILE_DIR + topic );
+                if (!file.exists()) {       //判断topic文件是否存在，不存在的话返回null，否则建立内存映射
+                    return null;
+                }
+
+                FileChannel fc = new RandomAccessFile(file, "r").getChannel();
+                in = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
+
+                // inMap.put(inKey, in);
+            }
+
+            // 这个流已经读完
+            if (!in.hasRemaining()) {
+                in = null;
+                // inMap.remove(inKey);
+                return null;
+            }
+
+
+
+            // 读取 headers 部分
+            KeyValue headers = new DefaultKeyValue();
+            headers.put(MessageHeader.TOPIC, topic);    // 直接写入 topic
+
+
+            short key = in.getShort();
+
+            for (int i = 0; i < 15; i++) {
+                if ((key & 1) == 1) {
+                    if (i < 4)
+                        headers.put(MessageHeader.getHeader(i), in.getInt());
+                    else if (i < 8)
+                        headers.put(MessageHeader.getHeader(i), in.getLong());
+                    else if (i < 10)
+                        headers.put(MessageHeader.getHeader(i), in.getDouble());
+                    else {
+                        byte[] vals = new byte[in.get()];    // valueLength
+                        in.get(vals);   // value
+                        headers.put(MessageHeader.getHeader(i), new String(vals));
+                    }
+
+                }
+                key >>= 1;
+            }
+
+
+            // 读取 body 部分
+            byte type = in.get();
+            byte[] body;
+            if (type == 0) {
+                body = new byte[in.get()];
+            } else {
+                body = new byte[in.getInt()];
+            }
+            in.get(body);
+
+
+            // 组成消息并返回
+            ByteMessage msg = new DefaultMessage(body);
+            msg.setHeaders(headers);
+            return msg;
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private String getBytesString(byte[] bytes) {
+        String res = strMap.computeIfAbsent(bytes, k -> new String(bytes));
+        return res;
+    }
 
 
             /*
@@ -225,29 +331,7 @@ public class DemoMessageStore {
                 out.write(v14.getBytes());
             }
 
-            for (int i = 14; i >= 0; i--) {
-                key <<= 1;
-                if (headers.containsKey(MessageHeader.getHeader(i)))
-                    key = (short) (key | 1);
-            }
 
-            for (int i = 0; i < 15; i++) {
-                if ((key & 1) == 1) {
-                    if (i < 4)
-                        out.writeInt(headers.getInt(MessageHeader.getHeader(i)));
-                    else if (i < 8)
-                        out.writeLong(headers.getLong(MessageHeader.getHeader(i)));
-                    else if (i < 10)
-                        out.writeDouble(headers.getDouble(MessageHeader.getHeader(i)));
-                    else {
-                        String strVal = headers.getString(MessageHeader.getHeader(i));
-                        out.writeByte(strVal.getBytes().length);
-                        out.write(strVal.getBytes());
-                    }
-
-                }
-                key >>= 1;
-            }
 
 
 
@@ -331,124 +415,8 @@ public class DemoMessageStore {
         */
 
 
-            // write body's length, byte[]
-            int bodyLen = msg.getBody().length;
-            if (bodyLen <= Byte.MAX_VALUE) {    // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
-                out.writeByte(0);
-                out.writeByte(bodyLen);
-                cnt[0]++;
-            } else {
-                out.writeByte(1);
-                out.writeInt(bodyLen);
-                cnt[2]++;
-            }
-            out.write(msg.getBody());
 
 
-
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-	}
-
-
-    // 加锁保证线程安全
-    public ByteMessage pull(String queue, String topic) {
-        try {
-
-            String inKey = queue + topic;
-            in = inMap.get(inKey);
-            if (in == null) {   // 不含则新建 buffer
-                File file = new File(FILE_DIR + topic );
-                if (!file.exists()) {       //判断topic文件是否存在，不存在的话返回null，否则建立内存映射
-                    return null;
-                }
-
-                FileChannel fc = new RandomAccessFile(file, "r").getChannel();
-                in = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
-
-                inMap.put(inKey, in);
-            }
-
-            // 这个流已经读完
-            if (!in.hasRemaining()) {
-                inMap.remove(inKey);
-                return null;
-            }
-
-
-
-            // 读取 headers 部分
-            KeyValue headers = new DefaultKeyValue();
-            headers.put(MessageHeader.TOPIC, topic);    // 直接写入 topic
-
-            /*
-            short key = in.getShort();
-
-            for (int i = 0; i < 15; i++) {
-                if ((key & 1) == 1) {
-                    if (i < 4)
-                        headers.put(MessageHeader.getHeader(i), in.getInt());
-                    else if (i < 8)
-                        headers.put(MessageHeader.getHeader(i), in.getLong());
-                    else if (i < 10)
-                        headers.put(MessageHeader.getHeader(i), in.getDouble());
-                    else {
-                        byte[] vals = new byte[in.get()];    // valueLength
-                        in.get(vals);   // value
-                        headers.put(MessageHeader.getHeader(i), new String(vals));
-                    }
-
-                }
-                key >>= 1;
-            }*/
-
-            int i = 0;
-            for ( ; i < 4; i++)
-                headers.put(MessageHeader.getHeader(i), in.getInt());
-            for ( ; i < 8; i++)
-                headers.put(MessageHeader.getHeader(i), in.getLong());
-            for ( ; i < 10; i++)
-                headers.put(MessageHeader.getHeader(i), in.getDouble());
-            for ( ; i < 15; i++) {
-                byte len = in.get();
-                if (len > 0) {
-                    byte[] vals = new byte[len];
-                    in.get(vals);   // value
-                    headers.put(MessageHeader.getHeader(i), new String(vals));
-                }
-            }
-
-
-
-            // 读取 body 部分
-            byte type = in.get();
-            byte[] body;
-            if (type == 0) {
-                body = new byte[in.get()];
-            } else {
-                body = new byte[in.getInt()];
-            }
-            in.get(body);
-
-
-            // 组成消息并返回
-            ByteMessage msg = new DefaultMessage(body);
-            msg.setHeaders(headers);
-            return msg;
-
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    private String getBytesString(byte[] bytes) {
-        String res = strMap.computeIfAbsent(bytes, k -> new String(bytes));
-        return res;
-    }
 
 
 
@@ -617,7 +585,6 @@ public class DemoMessageStore {
                 out = outMap.get(topic);
                 out.flush();
             }
-            System.out.println(Arrays.toString(cnt));
         } catch (IOException e) {
             e.printStackTrace();
         }
