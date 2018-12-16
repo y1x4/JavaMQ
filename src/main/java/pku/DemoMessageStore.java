@@ -13,17 +13,16 @@ import java.util.zip.InflaterOutputStream;
  * 这是一个消息队列的内存实现
  */
 public class DemoMessageStore {
-	// static final DemoMessageStore store = new DemoMessageStore();
+	static final DemoMessageStore store = new DemoMessageStore();
 
     private static final String FILE_DIR = "./data/";
 
-	// static final HashMap<String, DataOutputStream> outMap = new HashMap<>();
+	static final HashMap<String, DataOutputStream> outMap = new HashMap<>();
     // static final HashMap<String, MappedByteBuffer> inMap  = new HashMap<>();
 
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
     MappedByteBuffer in;     // 按 queue + topic 读取 不同 topic 文件
 
-    String currTopic;
 
     HashMap<byte[], String> strMap  = new HashMap<>();
 
@@ -38,24 +37,22 @@ public class DemoMessageStore {
 
 
 	// 加锁保证线程安全
-	public void push(ByteMessage msg, String topic) {
+	public synchronized void push(ByteMessage msg, String topic) {
 		if (msg == null)
 			return;
 
         try {
 
             // 获取写入流
-            if (out == null || !topic.equals(currTopic)) {
+            out = outMap.get(topic);
+            if (out == null) {
                 File file = new File(FILE_DIR + topic);
-                // if (file.exists()) file.delete();
+                if (file.exists()) file.delete();
 
-                if (out != null) out.flush();
                 out = new DataOutputStream(new BufferedOutputStream(
                         new FileOutputStream(file, true), 32768));
-                currTopic = topic;
-                // outMap.put(topic, out);
+                outMap.put(topic, out);
             }
-            // out = outMap.get(topic);
 
 
             // use short to record header keys, except TOPIC
@@ -582,13 +579,13 @@ public class DemoMessageStore {
 
 
     // flush
-	public void flush() {
-        //DataOutputStream out;
+	public void flush(Set<String> topics) {
+        DataOutputStream out;
         try {
-            //for (String topic : topics) {
-            //    out = outMap.get(topic);
+            for (String topic : topics) {
+                out = outMap.get(topic);
                 out.flush();
-            //}
+            }
             //System.out.println(Arrays.toString(cnt));
         } catch (IOException e) {
             e.printStackTrace();

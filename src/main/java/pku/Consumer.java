@@ -12,7 +12,7 @@ public class Consumer {
     String queue;
     int index = 0;
 
-    final DemoMessageStore store = new DemoMessageStore();
+    final PullHelper pullHelper = new PullHelper();
 
     private BufferService bufferService = BufferService.getInstance("./data/");
     private ArrayList<MessageReader> readers = new ArrayList<>();
@@ -45,7 +45,7 @@ public class Consumer {
         ByteMessage re;
 
         do {
-            re = store.pull(queue, topics.get(index));
+            re = pullHelper.pull(topics.get(index));
         } while (re == null && ++index < topics.size());
 
         return re;
