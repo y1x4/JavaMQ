@@ -22,6 +22,7 @@ public class DemoMessageStore {
     HashMap<String, MappedByteBuffer> inMap  = new HashMap<>();
 
     static int[] cnt = new int[17];
+    static int[] strnt = new int[127];
 
 
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
@@ -181,26 +182,31 @@ public class DemoMessageStore {
             key >>= 1;
 
             if ((key & 1) == 1) {
+                strnt[v10.length()]++;
                 out.writeByte(v10.length());
                 out.write(v10.getBytes());
             }
             key >>= 1;
             if ((key & 1) == 1) {
+                strnt[v11.length()]++;
                 out.writeByte(v11.length());
                 out.write(v11.getBytes());
             }
             key >>= 1;
             if ((key & 1) == 1) {
+                strnt[v12.length()]++;
                 out.writeByte(v12.length());
                 out.write(v12.getBytes());
             }
             key >>= 1;
             if ((key & 1) == 1) {
+                strnt[v13.length()]++;
                 out.writeByte(v13.length());
                 out.write(v13.getBytes());
             }
             key >>= 1;
             if ((key & 1) == 1) {
+                strnt[v14.length()]++;
                 out.writeByte(v14.length());
                 out.write(v14.getBytes());
             }
@@ -582,6 +588,7 @@ public class DemoMessageStore {
                 out.flush();
             }
             System.out.println(Arrays.toString(cnt));
+            System.out.println(Arrays.toString(strnt));
         } catch (IOException e) {
             e.printStackTrace();
         }

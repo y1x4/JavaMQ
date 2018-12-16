@@ -12,8 +12,8 @@ public class Consumer {
     String queue;
     int index = 0;
 
-    Map<String, DemoMessageStore> storeMap = new HashMap<>();
-    DemoMessageStore store;
+    // Map<String, DemoMessageStore> storeMap = new HashMap<>();
+    DemoMessageStore store = new DemoMessageStore();
 
     private BufferService bufferService = BufferService.getInstance("./data/");
     private ArrayList<MessageReader> readers = new ArrayList<>();
@@ -72,7 +72,7 @@ public class Consumer {
         return message;
         */
 
-        store = storeMap.computeIfAbsent(queue, k -> new DemoMessageStore());
+        // store = storeMap.computeIfAbsent(queue, k -> new DemoMessageStore());
 
 
         // 依次读取 topic 所有内容
