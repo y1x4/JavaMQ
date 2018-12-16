@@ -1,8 +1,6 @@
 package pku;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 /**
  * 消费者
@@ -14,6 +12,8 @@ public class Consumer {
     String queue;
     int index = 0;
 
+    Map<String, DemoMessageStore> storeMap = new HashMap<>();
+    DemoMessageStore store;
 
     private BufferService bufferService = BufferService.getInstance("./data/");
     private ArrayList<MessageReader> readers = new ArrayList<>();
@@ -72,12 +72,14 @@ public class Consumer {
         return message;
         */
 
+        store = storeMap.computeIfAbsent(queue, k -> new DemoMessageStore());
+
 
         // 依次读取 topic 所有内容
         ByteMessage re;
 
         do {
-            re = DemoMessageStore.store.pull(queue, topics.get(index));
+            re = store.pull(queue, topics.get(index));
         } while (re == null && ++index < topics.size());
 
         return re;

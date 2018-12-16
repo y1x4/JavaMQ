@@ -25,6 +25,9 @@ public class DemoMessageStore {
     MappedByteBuffer in;     // 按 queue + topic 读取 不同 topic 文件
 
 
+    HashMap<byte[], String> strMap  = new HashMap<>();
+
+
 
     static final int BUFFER_CAPACITY = 4660 * 1024;
 
@@ -301,7 +304,7 @@ public class DemoMessageStore {
 
 
     // 加锁保证线程安全
-    public synchronized ByteMessage pull(String queue, String topic) {
+    public ByteMessage pull(String queue, String topic) {
         try {
 
             String inKey = queue + topic;
@@ -373,6 +376,11 @@ public class DemoMessageStore {
             e.printStackTrace();
             return null;
         }
+    }
+
+    private String getBytesString(byte[] bytes) {
+        String res = strMap.computeIfAbsent(bytes, k -> new String(bytes));
+        return res;
     }
 
 
