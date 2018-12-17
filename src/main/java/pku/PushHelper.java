@@ -40,6 +40,8 @@ public class PushHelper {
             // use short to record header keys, except TOPIC
             KeyValue headers = msg.headers();
             short key = 0;
+            int len = 0;
+
 
             for (int i = 14; i >= 0; i--) {
                 key <<= 1;
@@ -65,7 +67,6 @@ public class PushHelper {
                 }
                 key >>= 1;
             }
-
 
             // write body's length, byte[]
             int bodyLen = msg.getBody().length;
