@@ -36,7 +36,7 @@ public class DemoMessageStore {
 
 
 	// 加锁保证线程安全
-	public synchronized void push(ByteMessage msg, String topic) {
+	public synchronized void push(ByteMessage msg, String topic, byte[] header) {
 		if (msg == null)
 			return;
 
@@ -54,34 +54,7 @@ public class DemoMessageStore {
             }
 
 
-            // use short to record header keys, except TOPIC
-            KeyValue headers = msg.headers();
-            short key = 0;
-
-            for (int i = 14; i >= 0; i--) {
-                key <<= 1;
-                if (headers.containsKey(MessageHeader.headerKeys[i]))
-                    key = (short) (key | 1);
-            }
-            out.writeShort(key);
-
-            for (int i = 0; i < 15; i++) {
-                if ((key & 1) == 1) {
-                    if (i < 4)
-                        out.writeInt(headers.getInt(MessageHeader.headerKeys[i]));
-                    else if (i < 8)
-                        out.writeLong(headers.getLong(MessageHeader.headerKeys[i]));
-                    else if (i < 10)
-                        out.writeDouble(headers.getDouble(MessageHeader.headerKeys[i]));
-                    else {
-                        String strVal = headers.getString(MessageHeader.headerKeys[i]);
-                        out.writeByte(strVal.getBytes().length);
-                        out.write(strVal.getBytes());
-                    }
-
-                }
-                key >>= 1;
-            }
+            out.write(header);
 
 
             // write body's length, byte[]
