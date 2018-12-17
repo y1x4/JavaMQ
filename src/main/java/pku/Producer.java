@@ -20,7 +20,7 @@ public class Producer {
     }
 
     //将message发送出去
-    public synchronized void send(ByteMessage msg) {
+    public void send(ByteMessage msg) {
         String topic = msg.headers().getString(MessageHeader.TOPIC);
         PushHelper.pushHelper.push(msg, topic);
     }

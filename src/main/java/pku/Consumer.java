@@ -13,21 +13,12 @@ import java.util.*;
 
 public class Consumer {
     final List<String> topics = new ArrayList<>();
-    int readPos = 0;
-    String queue;
     int index = 0;
-
-    //final PullHelper pullHelper = new PullHelper();
-    private static final String FILE_DIR = "./data/";
-
+    // int readPos = 0;
+    String queue;
     MappedByteBuffer in;
 
-    private BufferService bufferService = BufferService.getInstance("./data/");
-    private ArrayList<MessageReader> readers = new ArrayList<>();
-    private int pollIndex = 0;
-    private int count = 0;
-
-    private MessageSerializer deserializer = new MessageSerializer(); // thread local
+    private static final String FILE_DIR = "./data/";
 
 
     //将消费者订阅的topic进行绑定
@@ -39,29 +30,9 @@ public class Consumer {
         topics.addAll(t);
     }
 
-    public synchronized void attachQueue2(String queueName, Collection<String> topics) {
-        for (String topic: topics) {
-            readers.add(new MessageReader(topic, bufferService, deserializer));
-        }
-    }
-
 
     //每次消费读取一个message
     public synchronized ByteMessage poll() {
-
-        // 依次读取 topic 所有内容
-        ByteMessage re;
-
-        do {
-            re = pull(topics.get(index));
-        } while (re == null && ++index < topics.size());
-
-        return re;
-
-    }
-
-
-
         /*
         ByteMessage re = null;
         //先读第一个topic, 再读第二个topic...
@@ -76,6 +47,18 @@ public class Consumer {
         }
         return re;
         */
+
+
+        // 依次读取 topic 所有内容
+        ByteMessage re;
+
+        do {
+            re = pull(topics.get(index));
+        } while (re == null && ++index < topics.size());
+
+        return re;
+
+    }
 
 
     // 加锁保证线程安全
@@ -113,15 +96,15 @@ public class Consumer {
             for (int i = 0; i < 15; i++) {
                 if ((key & 1) == 1) {
                     if (i < 4)
-                        headers.put(MessageHeader.getHeader(i), in.getInt());
+                        headers.put(MessageHeader.headerKeys[i], in.getInt());
                     else if (i < 8)
-                        headers.put(MessageHeader.getHeader(i), in.getLong());
+                        headers.put(MessageHeader.headerKeys[i], in.getLong());
                     else if (i < 10)
-                        headers.put(MessageHeader.getHeader(i), in.getDouble());
+                        headers.put(MessageHeader.headerKeys[i], in.getDouble());
                     else {
                         byte[] vals = new byte[in.get()];    // valueLength
                         in.get(vals);   // value
-                        headers.put(MessageHeader.getHeader(i), new String(vals));
+                        headers.put(MessageHeader.headerKeys[i], new String(vals));
                     }
 
                 }

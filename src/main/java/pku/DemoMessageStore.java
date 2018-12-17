@@ -3,7 +3,6 @@ package pku;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.zip.DeflaterOutputStream;
@@ -61,7 +60,7 @@ public class DemoMessageStore {
 
             for (int i = 14; i >= 0; i--) {
                 key <<= 1;
-                if (headers.containsKey(MessageHeader.getHeader(i)))
+                if (headers.containsKey(MessageHeader.headerKeys[i]))
                     key = (short) (key | 1);
             }
             out.writeShort(key);
@@ -69,13 +68,13 @@ public class DemoMessageStore {
             for (int i = 0; i < 15; i++) {
                 if ((key & 1) == 1) {
                     if (i < 4)
-                        out.writeInt(headers.getInt(MessageHeader.getHeader(i)));
+                        out.writeInt(headers.getInt(MessageHeader.headerKeys[i]));
                     else if (i < 8)
-                        out.writeLong(headers.getLong(MessageHeader.getHeader(i)));
+                        out.writeLong(headers.getLong(MessageHeader.headerKeys[i]));
                     else if (i < 10)
-                        out.writeDouble(headers.getDouble(MessageHeader.getHeader(i)));
+                        out.writeDouble(headers.getDouble(MessageHeader.headerKeys[i]));
                     else {
-                        String strVal = headers.getString(MessageHeader.getHeader(i));
+                        String strVal = headers.getString(MessageHeader.headerKeys[i]);
                         out.writeByte(strVal.getBytes().length);
                         out.write(strVal.getBytes());
                     }
@@ -102,89 +101,6 @@ public class DemoMessageStore {
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-
-
-    // 加锁保证线程安全
-    public ByteMessage pull(String queue, String topic) {
-        try {
-
-            // String inKey = queue + topic;
-            // in = inMap.get(inKey);
-            if (in == null) {   // 不含则新建 buffer
-                File file = new File(FILE_DIR + topic );
-                if (!file.exists()) {       //判断topic文件是否存在，不存在的话返回null，否则建立内存映射
-                    return null;
-                }
-
-                FileChannel fc = new RandomAccessFile(file, "r").getChannel();
-                in = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
-
-                // inMap.put(inKey, in);
-            }
-
-            // 这个流已经读完
-            if (!in.hasRemaining()) {
-                in = null;
-                // inMap.remove(inKey);
-                return null;
-            }
-
-
-
-            // 读取 headers 部分
-            KeyValue headers = new DefaultKeyValue();
-            headers.put(MessageHeader.TOPIC, topic);    // 直接写入 topic
-
-
-            short key = in.getShort();
-
-            for (int i = 0; i < 15; i++) {
-                if ((key & 1) == 1) {
-                    if (i < 4)
-                        headers.put(MessageHeader.getHeader(i), in.getInt());
-                    else if (i < 8)
-                        headers.put(MessageHeader.getHeader(i), in.getLong());
-                    else if (i < 10)
-                        headers.put(MessageHeader.getHeader(i), in.getDouble());
-                    else {
-                        byte[] vals = new byte[in.get()];    // valueLength
-                        in.get(vals);   // value
-                        headers.put(MessageHeader.getHeader(i), new String(vals));
-                    }
-
-                }
-                key >>= 1;
-            }
-
-
-            // 读取 body 部分
-            byte type = in.get();
-            byte[] body;
-            if (type == 0) {
-                body = new byte[in.get()];
-            } else {
-                body = new byte[in.getInt()];
-            }
-            in.get(body);
-
-
-            // 组成消息并返回
-            ByteMessage msg = new DefaultMessage(body);
-            msg.setHeaders(headers);
-            return msg;
-
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    private String getBytesString(byte[] bytes) {
-        String res = strMap.computeIfAbsent(bytes, k -> new String(bytes));
-        return res;
     }
 
 

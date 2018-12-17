@@ -45,7 +45,7 @@ public class PushHelper {
 
             for (int i = 14; i >= 0; i--) {
                 key <<= 1;
-                if (headers.containsKey(MessageHeader.getHeader(i)))
+                if (headers.containsKey(MessageHeader.headerKeys[i]))
                     key = (short) (key | 1);
             }
             out.writeShort(key);
@@ -53,13 +53,13 @@ public class PushHelper {
             for (int i = 0; i < 15; i++) {
                 if ((key & 1) == 1) {
                     if (i < 4)
-                        out.writeInt(headers.getInt(MessageHeader.getHeader(i)));
+                        out.writeInt(headers.getInt(MessageHeader.headerKeys[i]));
                     else if (i < 8)
-                        out.writeLong(headers.getLong(MessageHeader.getHeader(i)));
+                        out.writeLong(headers.getLong(MessageHeader.headerKeys[i]));
                     else if (i < 10)
-                        out.writeDouble(headers.getDouble(MessageHeader.getHeader(i)));
+                        out.writeDouble(headers.getDouble(MessageHeader.headerKeys[i]));
                     else {
-                        String strVal = headers.getString(MessageHeader.getHeader(i));
+                        String strVal = headers.getString(MessageHeader.headerKeys[i]);
                         out.writeByte(strVal.getBytes().length);
                         out.write(strVal.getBytes());
                     }
