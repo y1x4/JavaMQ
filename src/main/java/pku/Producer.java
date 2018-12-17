@@ -90,7 +90,7 @@ public class Producer {
             key >>= 1;
         }
 
-        DemoMessageStore.store.push(msg, topic, header);
+        DemoMessageStore.store.push(msg.getBody(), topic, header);
     }
 
     //处理将缓存区的剩余部分

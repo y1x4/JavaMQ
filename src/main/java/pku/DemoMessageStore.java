@@ -32,9 +32,7 @@ public class DemoMessageStore {
 
 
 	// 加锁保证线程安全
-	public synchronized void push(ByteMessage msg, String topic, byte[] header) {
-		if (msg == null)
-			return;
+	public synchronized void push(byte[] body, String topic, byte[] header) {
 
         try {
 
@@ -44,17 +42,14 @@ public class DemoMessageStore {
                 File file = new File(FILE_DIR + topic);
                 if (file.exists()) file.delete();
 
-                out = new DataOutputStream(new BufferedOutputStream(
-                        new FileOutputStream(file, true), 32768));
+                out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(file, true), 32768));
                 outMap.put(topic, out);
             }
 
 
             out.write(header);
 
-
-            // write body's length, byte[]
-            int bodyLen = msg.getBody().length;
+            int bodyLen = body.length;
             if (bodyLen <= Byte.MAX_VALUE) {    // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
                 out.writeByte(0);
                 out.writeByte(bodyLen);
@@ -62,9 +57,8 @@ public class DemoMessageStore {
                 out.writeByte(1);
                 out.writeInt(bodyLen);
             }
-            out.write(msg.getBody());
 
-
+            out.write(body);
 
 
         } catch (IOException e) {
