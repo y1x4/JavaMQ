@@ -471,4 +471,15 @@ public class DemoMessageStore {
         }
     }
 
+    // flush
+    public void flush() {
+        try {
+            for (DataOutputStream outputStream : outMap.values()) {
+                outputStream.flush();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 }
