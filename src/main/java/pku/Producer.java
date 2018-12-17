@@ -1,15 +1,23 @@
 package pku;
 
-import java.util.HashMap;
+import java.io.*;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * 生产者: 依次遍历 topics 每个 topic 生产 PUSH_COUNT 个消息
  */
 public class Producer {
 
-    // private Set<String> topics = new HashSet<>();
+    private Set<String> topics = new HashSet<>();
     static int count = 4;
-    static HashMap<String, Long> cnt = new HashMap<>();
+    // static HashMap<String, Long> cnt = new HashMap<>();
+
+    DataOutputStream out;   // 按 topic 写入不同 topic 文件
+
+    private static final String FILE_DIR = "./data/";
+
+
 
 	// 生成一个指定topic的message返回
     public ByteMessage createBytesMessageToTopic(String topic, byte[] body) {
@@ -92,20 +100,58 @@ public class Producer {
         }
 
 
-        cnt.put(topic, cnt.getOrDefault(topic, 0L) + len + msg.getBody().length);
+        // cnt.put(topic, cnt.getOrDefault(topic, 0L) + len + msg.getBody().length);
 
-        DemoMessageStore.store.push(header, msg.getBody(), topic);
+        push(header, msg.getBody(), topic);
     }
+
+
+
+    // 加锁保证线程安全
+    public synchronized void push(byte[] header, byte[] body, String topic) {
+
+        try {
+
+            // 获取写入流
+            // out = outMap.get(topic);
+            if (!topics.contains(topic)) {
+                File file = new File(FILE_DIR + topic);
+                if (file.exists()) file.delete();
+
+                out = new DataOutputStream(new BufferedOutputStream(
+                        new FileOutputStream(file, true), 32768));
+                //outMap.put(topic, out);
+                topics.add(topic);
+            }
+
+
+            out.write(header);
+
+            int bodyLen = body.length;
+            if (bodyLen <= Byte.MAX_VALUE) {    // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
+                out.writeByte(0);
+                out.writeByte(bodyLen);
+            } else {
+                out.writeByte(1);
+                out.writeInt(bodyLen);
+            }
+
+            out.write(body);
+
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
 
     //处理将缓存区的剩余部分
     public void flush()throws Exception {
         count--;
         if (count == 0) {
             DemoMessageStore.store.flush();
-
-            for (String topic : cnt.keySet()) {
-                System.out.println(topic + "   " + cnt.get(topic));
-            }
         }
         System.out.println("flush");
     }

@@ -9,7 +9,6 @@ import java.util.Set;
  * Created by yixu on 2018/12/16.
  */
 public class PushHelper {
-    static final PushHelper pushHelper = new PushHelper();
 
     private static final String FILE_DIR = "./data/";
 
