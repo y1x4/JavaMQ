@@ -47,7 +47,7 @@ public class Consumer {
 
 
     //每次消费读取一个message
-    public synchronized ByteMessage poll() {
+    public ByteMessage poll() {
 
         // 依次读取 topic 所有内容
         ByteMessage re;
