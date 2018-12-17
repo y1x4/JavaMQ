@@ -24,7 +24,6 @@ public class Producer {
         String topic = msg.headers().getString(MessageHeader.TOPIC);
 
 
-
         // use short to record header keys, except TOPIC
         KeyValue headers = msg.headers();
         short key = 0;
@@ -72,7 +71,7 @@ public class Producer {
                     header[index++] = (byte) (numLong & 0xFF);
                 } else if (i < 10) {
                     numLong = Double.doubleToLongBits(headers.getDouble(MessageHeader.headerKeys[i]));
-                    header[index++] = (byte) ((numLong >> 56) & 0xFF);
+                    header[index++] = (byte) ((numLong >>> 56) & 0xFF);
                     header[index++] = (byte) ((numLong >>> 48) & 0xFF);
                     header[index++] = (byte) ((numLong >>> 40) & 0xFF);
                     header[index++] = (byte) ((numLong >>> 32) & 0xFF);
@@ -84,6 +83,7 @@ public class Producer {
                     strVals = headers.getString(MessageHeader.headerKeys[i]).getBytes();
                     header[index++] = (byte) strVals.length;
                     System.arraycopy(strVals, 0, header, index, strVals.length);
+                    index += strVals.length;
                 }
 
             }

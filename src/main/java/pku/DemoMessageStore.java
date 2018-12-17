@@ -17,13 +17,9 @@ public class DemoMessageStore {
     private static final String FILE_DIR = "./data/";
 
 	static final HashMap<String, DataOutputStream> outMap = new HashMap<>();
-    // static final HashMap<String, MappedByteBuffer> inMap  = new HashMap<>();
 
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
     MappedByteBuffer in;     // 按 queue + topic 读取 不同 topic 文件
-
-
-    HashMap<byte[], String> strMap  = new HashMap<>();
 
 
     static final int BUFFER_CAPACITY = 4660 * 1024;
