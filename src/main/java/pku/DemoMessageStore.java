@@ -2,7 +2,6 @@ package pku;
 
 import java.io.*;
 import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.zip.DeflaterOutputStream;
@@ -19,7 +18,7 @@ public class DemoMessageStore {
 	static final HashMap<String, DataOutputStream> outMap = new HashMap<>();
 
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
-    MappedByteBuffer in;     // 按 queue + topic 读取 不同 topic 文件
+
 
 
     static final int BUFFER_CAPACITY = 4660 * 1024;
@@ -39,11 +38,11 @@ public class DemoMessageStore {
             // 获取写入流
             out = outMap.get(topic);
             if (out == null) {
-                // File file = new File(FILE_DIR + topic);
-                // if (file.exists()) file.delete();
+                File file = new File(FILE_DIR + topic);
+                if (file.exists()) file.delete();
 
                 out = new DataOutputStream(new BufferedOutputStream(
-                        new FileOutputStream(new File(FILE_DIR + topic), true), 32768));
+                        new FileOutputStream(file, true), 32768));
                 outMap.put(topic, out);
             }
 
@@ -60,6 +59,7 @@ public class DemoMessageStore {
             }
 
             out.write(body);
+
 
 
         } catch (IOException e) {

@@ -1,5 +1,7 @@
 package pku;
 
+import java.util.HashMap;
+
 /**
  * 生产者: 依次遍历 topics 每个 topic 生产 PUSH_COUNT 个消息
  */
@@ -7,6 +9,7 @@ public class Producer {
 
     // private Set<String> topics = new HashSet<>();
     static int count = 4;
+    static HashMap<String, Long> cnt = new HashMap<>();
 
 	// 生成一个指定topic的message返回
     public ByteMessage createBytesMessageToTopic(String topic, byte[] body) {
@@ -88,14 +91,22 @@ public class Producer {
             key >>= 1;
         }
 
+
+        cnt.put(topic, cnt.getOrDefault(topic, 0L) + len + msg.getBody().length);
+
         DemoMessageStore.store.push(header, msg.getBody(), topic);
     }
 
     //处理将缓存区的剩余部分
     public void flush()throws Exception {
         count--;
-        if (count == 0)
+        if (count == 0) {
             DemoMessageStore.store.flush();
+
+            for (String topic : cnt.keySet()) {
+                System.out.println(topic + "   " + cnt.get(topic));
+            }
+        }
         System.out.println("flush");
     }
 }
