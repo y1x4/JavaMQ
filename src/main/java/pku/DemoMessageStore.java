@@ -39,10 +39,11 @@ public class DemoMessageStore {
             // 获取写入流
             out = outMap.get(topic);
             if (out == null) {
-                File file = new File(FILE_DIR + topic);
-                if (file.exists()) file.delete();
+                // File file = new File(FILE_DIR + topic);
+                // if (file.exists()) file.delete();
 
-                out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(file, true), 32768));
+                out = new DataOutputStream(new BufferedOutputStream(
+                        new FileOutputStream(new File(FILE_DIR + topic), true), 32768));
                 outMap.put(topic, out);
             }
 
