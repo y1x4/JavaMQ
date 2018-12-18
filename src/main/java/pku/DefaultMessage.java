@@ -1,12 +1,11 @@
 package pku;
 
-import java.io.OutputStream;
-import java.util.HashMap;
+import java.io.Serializable;
 
 /**
  *消息的实现
  */
-public class DefaultMessage implements ByteMessage{
+public class DefaultMessage implements ByteMessage, Serializable {
 
     private KeyValue headers = new DefaultKeyValue();
     private byte[] body;
