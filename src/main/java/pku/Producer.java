@@ -102,7 +102,7 @@ public class Producer {
 
         // cnt.put(topic, cnt.getOrDefault(topic, 0L) + len + msg.getBody().length);
 
-        push(header, msg.getBody(), topic);
+        DemoMessageStore.store.push(header, msg.getBody(), topic);
     }
 
 
@@ -118,6 +118,7 @@ public class Producer {
                 File file = new File(FILE_DIR + topic);
                 if (file.exists()) file.delete();
 
+                if (out != null) out.flush();
                 out = new DataOutputStream(new BufferedOutputStream(
                         new FileOutputStream(file, true), 32768));
                 //outMap.put(topic, out);
@@ -149,10 +150,11 @@ public class Producer {
 
     //处理将缓存区的剩余部分
     public void flush()throws Exception {
+
         count--;
         if (count == 0) {
             DemoMessageStore.store.flush();
+            System.out.println("flush");
         }
-        System.out.println("flush");
     }
 }
