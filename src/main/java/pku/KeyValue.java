@@ -7,7 +7,7 @@ import java.util.Set;
  * Key-Value接口
  * 代表key-value的映射, key为String类型, value的类型只有四种:int long double String
  */
-public interface KeyValue{
+public interface KeyValue {
 
     public Object getObj(String key);
 
