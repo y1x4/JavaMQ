@@ -32,7 +32,7 @@ public class Consumer {
 
 
     //每次消费读取一个message
-    public synchronized ByteMessage poll() {
+    public ByteMessage poll() {
         /*
         ByteMessage re = null;
         //先读第一个topic, 再读第二个topic...
