@@ -51,9 +51,7 @@ public class Producer {
         }
 
         byte[] header = new byte[len];
-
-        // key
-        header[0] = (byte) ((key >>> 8) & 0xFF);
+        header[0] = (byte) ((key >>> 8) & 0xFF);   // key
         header[1] = (byte) (key & 0xFF);
 
         int index = 2;
@@ -98,9 +96,6 @@ public class Producer {
             }
             key >>= 1;
         }
-
-
-        // cnt.put(topic, cnt.getOrDefault(topic, 0L) + len + msg.getBody().length);
 
         DemoMessageStore.store.push(header, msg.getBody(), topic);
     }
@@ -150,9 +145,7 @@ public class Producer {
 
     //处理将缓存区的剩余部分
     public void flush()throws Exception {
-
-        count--;
-        if (count == 0) {
+        if (--count == 0) {
             DemoMessageStore.store.flush();
             System.out.println("flush");
         }
