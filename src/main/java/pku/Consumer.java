@@ -1,11 +1,13 @@
 package pku;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.*;
+import java.util.zip.InflaterOutputStream;
 
 /**
  * 消费者
@@ -117,10 +119,12 @@ public class Consumer {
             byte[] body;
             if (type == 0) {
                 body = new byte[in.get()];
+                in.get(body);
             } else {
                 body = new byte[in.getInt()];
+                in.get(body);
+                body = decompress(body);
             }
-            in.get(body);
 
 
             // 组成消息并返回
@@ -131,6 +135,24 @@ public class Consumer {
 
         } catch (IOException e) {
             e.printStackTrace();
+            return null;
+        }
+    }
+
+
+
+    public static byte[] decompress(byte[] in) {
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            InflaterOutputStream infl = new InflaterOutputStream(out);
+            infl.write(in);
+            infl.flush();
+            infl.close();
+
+            return out.toByteArray();
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(150);
             return null;
         }
     }

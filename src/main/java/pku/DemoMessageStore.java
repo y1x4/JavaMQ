@@ -5,7 +5,6 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.zip.DeflaterOutputStream;
-import java.util.zip.InflaterOutputStream;
 
 /**
  * 这是一个消息队列的内存实现
@@ -53,12 +52,15 @@ public class DemoMessageStore {
             if (bodyLen <= Byte.MAX_VALUE) {    // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
                 out.writeByte(0);
                 out.writeByte(bodyLen);
+                out.write(body);
             } else {
                 out.writeByte(1);
-                out.writeInt(bodyLen);
+                byte[] compressedBody = compress(body);
+                assert compressedBody != null;
+                out.writeInt(compressedBody.length);
+                out.write(compressedBody);
             }
 
-            out.write(body);
 
 
 
@@ -423,21 +425,7 @@ public class DemoMessageStore {
         }
     }
 
-    public static byte[] decompress(byte[] in) {
-        try {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            InflaterOutputStream infl = new InflaterOutputStream(out);
-            infl.write(in);
-            infl.flush();
-            infl.close();
 
-            return out.toByteArray();
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.exit(150);
-            return null;
-        }
-    }
 
 
 
