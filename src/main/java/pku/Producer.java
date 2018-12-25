@@ -17,7 +17,7 @@ public class Producer {
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
 
     private static final String FILE_DIR = "./data/";
-    private static final int ONE_WRITE_SIZE = 800;
+    private static final int ONE_WRITE_SIZE = 400;
     private static final HashMap<String, BufferedOutputStream> topicStreams = new HashMap<>();
 
 
@@ -26,7 +26,7 @@ public class Producer {
     ByteMessage[] msgs = new ByteMessage[ONE_WRITE_SIZE];
     int index = 0;
     BufferedOutputStream fileChannel = null;
-    static int maxIndex = -1;
+    static int maxIndex = -1;   // 185206
 
 
 
