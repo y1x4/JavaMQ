@@ -22,7 +22,7 @@ public class Producer {
 
 
     byte[] array = new byte[2560000];
-    private ByteBuffer buffer = ByteBuffer.wrap(new byte[2560000]);
+    private ByteBuffer buffer = ByteBuffer.wrap(array);
     ByteMessage[] msgs = new ByteMessage[ONE_WRITE_SIZE];
     int index = 0;
     BufferedOutputStream fileChannel = null;
