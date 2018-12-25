@@ -59,7 +59,7 @@ public class Producer {
                     buffer.put((byte) bodyLen);
                     buffer.put(msg.getBody());
                 } else {
-                    buffer.put((byte) 0);
+                    buffer.put((byte) 1);
                     byte[] compressedBody = compress(msg.getBody());
                     buffer.putInt(compressedBody.length);
                     buffer.put(compressedBody);
