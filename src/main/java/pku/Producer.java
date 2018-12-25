@@ -21,7 +21,7 @@ public class Producer {
     private static final HashMap<String, BufferedOutputStream> outMap = new HashMap<>();    // topics' outstream
 
 
-    byte[] array = new byte[(ONE_WRITE_SIZE << 8)];  // 2560000
+    byte[] array = new byte[2560000];  // 2560000
     private ByteBuffer buffer = ByteBuffer.wrap(array);
     ByteMessage[] msgs = new ByteMessage[ONE_WRITE_SIZE];
     int index = 0;
