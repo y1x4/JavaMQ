@@ -12,7 +12,6 @@ public class Producer {
 
     private Set<String> topics = new HashSet<>();
     static int count = 4;
-    // static HashMap<String, Long> cnt = new HashMap<>();
 
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
 
