@@ -17,7 +17,7 @@ public class Producer {
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
 
     private static final String FILE_DIR = "./data/";
-    private static final int ONE_WRITE_SIZE = 100;
+    private static final int ONE_WRITE_SIZE = 400;
     private static final HashMap<String, BufferedOutputStream> outMap = new HashMap<>();    // topics' outstream
 
 
