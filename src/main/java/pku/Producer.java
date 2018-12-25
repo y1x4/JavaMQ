@@ -41,23 +41,14 @@ public class Producer {
     }
 
     //将message发送出去
-    public void send(ByteMessage msg) {
+    public void send(ByteMessage message) {
         // String topic = msg.headers().getString(MessageHeader.TOPIC);
 
 
         // DemoMessageStore.store.push(header, msg.getBody(), topic);
-        msgs.add(msg);
+        msgs.add(message);
         if (++msgCount >= ONE_WRITE_SIZE) {
             msgCount = 0;
-            writeMsgs(msg.headers().getString(MessageHeader.TOPIC));
-            msgs.clear();
-        }
-    }
-
-
-    public void writeMsgs(String topic) {
-        try {
-
 
             for (ByteMessage msg : msgs) {
                 buffer.put(getHeaderBytes(msg));
@@ -76,24 +67,33 @@ public class Producer {
             }
             buffer.flip();
 
-
-
-            synchronized (topicStreams) {
-                fileChannel = topicStreams.get(topic);
-                if (fileChannel == null) {
-                    File file = new File(FILE_DIR + topic);
-                    if (file.exists()) file.delete();
-
-                    fileChannel = new BufferedOutputStream(new FileOutputStream(file, true));
-                    topicStreams.put(topic, fileChannel);
-                }
-                fileChannel.write(array, 0, buffer.remaining());
-                fileChannel.flush();
-            }
-
-
+            writeMsgs(message.headers().getString(MessageHeader.TOPIC));
 
             buffer.clear();
+            msgs.clear();
+        }
+    }
+
+
+    public synchronized void writeMsgs(String topic) {
+        try {
+
+
+            //synchronized (topicStreams) {
+            fileChannel = topicStreams.get(topic);
+            if (fileChannel == null) {
+                File file = new File(FILE_DIR + topic);
+                if (file.exists()) file.delete();
+
+                fileChannel = new BufferedOutputStream(new FileOutputStream(file, true));
+                topicStreams.put(topic, fileChannel);
+            }
+            fileChannel.write(array, 0, buffer.remaining());
+            fileChannel.flush();
+            //}
+
+
+
 
         } catch (IOException e) {
             e.printStackTrace();
