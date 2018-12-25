@@ -17,8 +17,8 @@ public class Producer {
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
 
     private static final String FILE_DIR = "./data/";
-    private static final int ONE_WRITE_SIZE = 400;
-    private static final HashMap<String, BufferedOutputStream> topicStreams = new HashMap<>();
+    private static final int ONE_WRITE_SIZE = 10000;
+    private static final HashMap<String, BufferedOutputStream> outMap = new HashMap<>();    // topics' outstream
 
 
     byte[] array = new byte[2560000];
@@ -26,7 +26,7 @@ public class Producer {
     ByteMessage[] msgs = new ByteMessage[ONE_WRITE_SIZE];
     int index = 0;
     BufferedOutputStream fileChannel = null;
-    static int maxIndex = -1;   // 185206
+    static int maxIndex = -1;   //800-185206
 
 
 
@@ -75,13 +75,13 @@ public class Producer {
 
 
             //synchronized (topicStreams) {
-            fileChannel = topicStreams.get(topic);
+            fileChannel = outMap.get(topic);
             if (fileChannel == null) {
                 File file = new File(FILE_DIR + topic);
                 if (file.exists()) file.delete();
 
                 fileChannel = new BufferedOutputStream(new FileOutputStream(file, true));
-                topicStreams.put(topic, fileChannel);
+                outMap.put(topic, fileChannel);
             }
             maxIndex = Math.max(maxIndex, buffer.remaining());
             fileChannel.write(array, 0, buffer.remaining());

@@ -71,8 +71,8 @@ public class Consumer {
         try {
 
 
-            if (topic.equals("topic11"))
-                System.out.println(cnt);
+            // if (topic.equals("topic11")) System.out.println(cnt);
+
             // String inKey = queue + topic;
             // in = inMap.get(inKey);
             if (in == null) {   // 不含则新建 buffer
