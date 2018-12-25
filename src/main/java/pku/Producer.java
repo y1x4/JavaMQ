@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.zip.DeflaterOutputStream;
 
 /**
  * 生产者: 依次遍历 topics 每个 topic 生产 PUSH_COUNT 个消息
@@ -65,11 +66,13 @@ public class Producer {
                 if (bodyLen <= Byte.MAX_VALUE) {    // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
                     buffer.put((byte) 0);
                     buffer.put((byte) bodyLen);
+                    buffer.put(msg.getBody());
                 } else {
                     buffer.put((byte) 0);
-                    buffer.putInt(bodyLen);
+                    byte[] compressedBody = compress(msg.getBody());
+                    buffer.putInt(compressedBody.length);
+                    buffer.put(compressedBody);
                 }
-                buffer.put(msg.getBody());
             }
             buffer.flip();
 
@@ -218,5 +221,21 @@ public class Producer {
             System.out.println("flush");
         }*/
         System.out.println("flush");
+    }
+
+    public static byte[] compress(byte[] in) {
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            DeflaterOutputStream defl = new DeflaterOutputStream(out);
+            defl.write(in);
+            defl.flush();
+            defl.close();
+
+            return out.toByteArray();
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(150);
+            return null;
+        }
     }
 }
