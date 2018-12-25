@@ -17,12 +17,12 @@ public class Producer {
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
 
     private static final String FILE_DIR = "./data/";
-    private static final int ONE_WRITE_SIZE = 4000;
+    private static final int ONE_WRITE_SIZE = 2000;
     private static final HashMap<String, BufferedOutputStream> outMap = new HashMap<>();    // topics' outstream
 
 
     byte[] array = new byte[2560000];
-    private ByteBuffer buffer = ByteBuffer.wrap(array);
+    private ByteBuffer buffer = ByteBuffer.wrap(new byte[2560000]);
     ByteMessage[] msgs = new ByteMessage[ONE_WRITE_SIZE];
     int index = 0;
     BufferedOutputStream fileChannel = null;
@@ -95,6 +95,7 @@ public class Producer {
             e.printStackTrace();
         }
     }
+
 
 
     private byte[] getHeaderBytes(ByteMessage msg) {
