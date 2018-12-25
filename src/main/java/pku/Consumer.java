@@ -20,8 +20,6 @@ public class Consumer {
     String queue;
     MappedByteBuffer in;
 
-    static int cnt = 0;
-
     private static final String FILE_DIR = "./data/";
 
 
@@ -60,7 +58,6 @@ public class Consumer {
             re = pull(topics.get(index));
         } while (re == null && ++index < topics.size());
 
-        cnt++;
         return re;
 
     }
@@ -69,9 +66,6 @@ public class Consumer {
     // 加锁保证线程安全
     public ByteMessage pull(String topic) {
         try {
-
-
-            // if (topic.equals("topic11")) System.out.println(cnt);
 
             // String inKey = queue + topic;
             // in = inMap.get(inKey);

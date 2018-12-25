@@ -21,12 +21,11 @@ public class Producer {
     private static final HashMap<String, BufferedOutputStream> outMap = new HashMap<>();    // topics' outstream
 
 
-    byte[] array = new byte[2560000];  // 2560000
+    byte[] array = new byte[2560000];  // (ONE_WRITE_SIZE << 8)   800-185206   10000-2250883
     private ByteBuffer buffer = ByteBuffer.wrap(array);
     ByteMessage[] msgs = new ByteMessage[ONE_WRITE_SIZE];
     int index = 0;
     BufferedOutputStream fileChannel = null;
-    static int maxIndex = -1;   // 800-185206   10000-2250883
 
 
 
@@ -83,7 +82,6 @@ public class Producer {
                 fileChannel = new BufferedOutputStream(new FileOutputStream(file, true));
                 outMap.put(topic, fileChannel);
             }
-            maxIndex = Math.max(maxIndex, buffer.remaining());
             fileChannel.write(array, 0, buffer.remaining());
             fileChannel.flush();
             //}
@@ -217,7 +215,6 @@ public class Producer {
             DemoMessageStore.store.flush();
             System.out.println("flush");
         }*/
-        System.out.println(maxIndex);
         System.out.println("flush");
     }
 
