@@ -2,10 +2,7 @@ package pku;
 
 import java.io.*;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.zip.DeflaterOutputStream;
 
 /**
@@ -27,7 +24,8 @@ public class Producer {
     String currTopic;
     byte[] array = new byte[2560000];
     private ByteBuffer buffer = ByteBuffer.wrap(array);
-    ArrayList<ByteMessage> msgs = new ArrayList<>();
+    ByteMessage[] msgs = new ByteMessage[400];
+    int index = 0;
     int msgCount = 0;
     BufferedOutputStream fileChannel = null;
 
@@ -44,10 +42,9 @@ public class Producer {
     public void send(ByteMessage message) {
         // String topic = msg.headers().getString(MessageHeader.TOPIC);
 
-
         // DemoMessageStore.store.push(header, msg.getBody(), topic);
-        msgs.add(message);
-        if (++msgCount >= ONE_WRITE_SIZE) {
+        msgs[index++] = message;
+        if (index >= ONE_WRITE_SIZE) {
             msgCount = 0;
 
             for (ByteMessage msg : msgs) {
@@ -70,7 +67,7 @@ public class Producer {
             writeMsgs(message.headers().getString(MessageHeader.TOPIC));
 
             buffer.clear();
-            msgs.clear();
+            index = 0;
         }
     }
 
