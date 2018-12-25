@@ -1,6 +1,9 @@
 package pku;
 
 import java.io.*;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -16,13 +19,21 @@ public class Producer {
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
 
     private static final String FILE_DIR = "./data/";
+    private static final int ONE_WRITE_SIZE = 400;
+    private static final HashMap<String, BufferedOutputStream> topicStreams = new HashMap<>();
+
+
+    String currTopic;
+    byte[] array = new byte[2560000];
+    private ByteBuffer buffer = ByteBuffer.wrap(array);
+    ArrayList<ByteMessage> msgs = new ArrayList<>();
+    int msgCount = 0;
+    BufferedOutputStream fileChannel = null;
 
 
 
 	// 生成一个指定topic的message返回
     public ByteMessage createBytesMessageToTopic(String topic, byte[] body) {
-        // topics.add(topic);
-
         ByteMessage msg = new DefaultMessage(body);
         msg.putHeaders(MessageHeader.TOPIC, topic);
         return msg;
@@ -30,8 +41,64 @@ public class Producer {
 
     //将message发送出去
     public void send(ByteMessage msg) {
-        String topic = msg.headers().getString(MessageHeader.TOPIC);
+        // String topic = msg.headers().getString(MessageHeader.TOPIC);
 
+
+        // DemoMessageStore.store.push(header, msg.getBody(), topic);
+        msgs.add(msg);
+        if (++msgCount >= ONE_WRITE_SIZE) {
+            msgCount = 0;
+            writeMsgs(msg.headers().getString(MessageHeader.TOPIC));
+            msgs.clear();
+        }
+    }
+
+
+    public void writeMsgs(String topic) {
+        try {
+
+
+            for (ByteMessage msg : msgs) {
+                buffer.put(getHeaderBytes(msg));
+
+                int bodyLen = msg.getBody().length;
+                if (bodyLen <= Byte.MAX_VALUE) {    // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
+                    buffer.put((byte) 0);
+                    buffer.put((byte) bodyLen);
+                } else {
+                    buffer.put((byte) 0);
+                    buffer.putInt(bodyLen);
+                }
+                buffer.put(msg.getBody());
+            }
+            buffer.flip();
+
+
+
+            synchronized (topicStreams) {
+                fileChannel = topicStreams.get(topic);
+                if (fileChannel == null) {
+                    File file = new File(FILE_DIR + topic);
+                    if (file.exists()) file.delete();
+
+                    fileChannel = new BufferedOutputStream(new FileOutputStream(file, true));
+                    topicStreams.put(topic, fileChannel);
+                }
+                fileChannel.write(array, 0, buffer.remaining());
+                fileChannel.flush();
+            }
+
+
+
+            buffer.clear();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    private byte[] getHeaderBytes(ByteMessage msg) {
 
         // use short to record header keys, except TOPIC
         KeyValue headers = msg.headers();
@@ -97,7 +164,7 @@ public class Producer {
             key >>= 1;
         }
 
-        DemoMessageStore.store.push(header, msg.getBody(), topic);
+        return header;
     }
 
 
@@ -145,9 +212,11 @@ public class Producer {
 
     //处理将缓存区的剩余部分
     public void flush()throws Exception {
+        /*
         if (--count == 0) {
             DemoMessageStore.store.flush();
             System.out.println("flush");
-        }
+        }*/
+        System.out.println("flush");
     }
 }
