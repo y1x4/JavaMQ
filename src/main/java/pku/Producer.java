@@ -17,17 +17,16 @@ public class Producer {
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
 
     private static final String FILE_DIR = "./data/";
-    private static final int ONE_WRITE_SIZE = 400;
+    private static final int ONE_WRITE_SIZE = 800;
     private static final HashMap<String, BufferedOutputStream> topicStreams = new HashMap<>();
 
 
-    String currTopic;
     byte[] array = new byte[2560000];
     private ByteBuffer buffer = ByteBuffer.wrap(array);
-    ByteMessage[] msgs = new ByteMessage[400];
+    ByteMessage[] msgs = new ByteMessage[ONE_WRITE_SIZE];
     int index = 0;
-    int msgCount = 0;
     BufferedOutputStream fileChannel = null;
+    static int maxIndex = -1;
 
 
 
@@ -45,7 +44,6 @@ public class Producer {
         // DemoMessageStore.store.push(header, msg.getBody(), topic);
         msgs[index++] = message;
         if (index >= ONE_WRITE_SIZE) {
-            msgCount = 0;
 
             for (ByteMessage msg : msgs) {
                 buffer.put(getHeaderBytes(msg));
@@ -85,6 +83,7 @@ public class Producer {
                 fileChannel = new BufferedOutputStream(new FileOutputStream(file, true));
                 topicStreams.put(topic, fileChannel);
             }
+            maxIndex = Math.max(maxIndex, buffer.remaining());
             fileChannel.write(array, 0, buffer.remaining());
             fileChannel.flush();
             //}
@@ -217,6 +216,7 @@ public class Producer {
             DemoMessageStore.store.flush();
             System.out.println("flush");
         }*/
+        System.out.println(maxIndex);
         System.out.println("flush");
     }
 
