@@ -16,13 +16,13 @@ public class Producer {
     DataOutputStream out;   // 按 topic 写入不同 topic 文件
 
     private static final String FILE_DIR = "./data/";
-    private static final int ONE_WRITE_SIZE = 400;
+    private static final int ONCE_WRITE_SIZE = 400;
     private static final HashMap<String, BufferedOutputStream> outMap = new HashMap<>();    // topics' outstream
 
 
     byte[] array = new byte[2560000];  // (ONE_WRITE_SIZE << 8)   800-185206   10000-2250883
     private ByteBuffer buffer = ByteBuffer.wrap(array);
-    ByteMessage[] msgs = new ByteMessage[ONE_WRITE_SIZE];
+    ByteMessage[] msgs = new ByteMessage[ONCE_WRITE_SIZE];
     int index = 0;
     BufferedOutputStream fileChannel = null;
 
@@ -36,12 +36,12 @@ public class Producer {
     }
 
     //将message发送出去
-    public void send(ByteMessage message) {
+    public void send2(ByteMessage message) {
         // String topic = msg.headers().getString(MessageHeader.TOPIC);
 
         // DemoMessageStore.store.push(header, msg.getBody(), topic);
         msgs[index++] = message;
-        if (index >= ONE_WRITE_SIZE) {
+        if (index >= ONCE_WRITE_SIZE) {
 
             for (ByteMessage msg : msgs) {
                 buffer.put(getHeaderBytes(msg));
@@ -61,6 +61,38 @@ public class Producer {
             buffer.flip();
 
             writeMsgs(message.headers().getString(MessageHeader.TOPIC));
+
+            buffer.clear();
+            index = 0;
+        }
+    }
+
+    //将message发送出去
+    public void send(ByteMessage msg) {
+        // String topic = msg.headers().getString(MessageHeader.TOPIC);
+
+        // DemoMessageStore.store.push(header, msg.getBody(), topic);
+
+        buffer.put(getHeaderBytes(msg));
+
+        int bodyLen = msg.getBody().length;
+        if (bodyLen <= Byte.MAX_VALUE) {    // body[] 的长度 > 127，即超过byte，先存入 1 ，再存入用int表示的长度
+            buffer.put((byte) 0);
+            buffer.put((byte) bodyLen);
+            buffer.put(msg.getBody());
+        } else {
+            buffer.put((byte) 1);
+            byte[] compressedBody = compress(msg.getBody());
+            buffer.putInt(compressedBody.length);
+            buffer.put(compressedBody);
+        }
+
+
+        if (++index >= ONCE_WRITE_SIZE) {
+
+            buffer.flip();
+
+            writeMsgs(msg.headers().getString(MessageHeader.TOPIC));
 
             buffer.clear();
             index = 0;
