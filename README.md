@@ -17,7 +17,9 @@
 常见消息队列: Kafka RabbitMQ ZeroMQ 
 应用场景:   双11订单、12306买票
 
-![image](MQ.png){:height="50%" width="50%"}
+### 图例
+
+![image](MQ.png)
 
 ### 编程目标
 实现简单的单进程消息队列
